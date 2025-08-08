@@ -85,6 +85,99 @@ func Test_initConfig_FailUnmarshal(t *testing.T) {
 	initConfig(ctx, cmd)
 }
 
+func Test_prepareProject_Success(t *testing.T) {
+	ctx := context.TestContext(nil)
+	ctx.WorkingDir = "/app"
+
+	cfg := &config.Config{
+		HTTP:            config.HTTPConfig{},
+		AcceptTypeFiles: []string{".1"},
+		ResizeTypeFiles: []string{".3"},
+		ResizeCGI:       config.ResizeCGIConfig{},
+		Projects: []config.Project{
+			{
+				ID:                   "overwrite",
+				AcceptTypeFiles:      []string{".4"},
+				ExtraAcceptTypeFiles: nil,
+			},
+			{
+				ID:                   "concat",
+				ExtraAcceptTypeFiles: []string{".2", ".3"},
+			},
+		},
+	}
+
+	want := []config.Project{
+		{
+			ID:                   "overwrite",
+			AcceptTypeFiles:      []string{".4"},
+			ExtraAcceptTypeFiles: nil,
+		},
+		{
+			ID:                   "concat",
+			AcceptTypeFiles:      []string{".1", ".2", ".3"},
+			ExtraAcceptTypeFiles: []string{".2", ".3"},
+		},
+	}
+
+	ctx.Config = cfg
+	err := prepareProject(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, want, cfg.Projects)
+}
+
+func Test_prepareProject_Compile_Fail(t *testing.T) {
+	ctx := context.TestContext(nil)
+	ctx.WorkingDir = "/app"
+
+	cfg := &config.Config{
+		HTTP:            config.HTTPConfig{},
+		AcceptTypeFiles: []string{".1"},
+		ResizeCGI:       config.ResizeCGIConfig{},
+		Projects: []config.Project{
+			{
+				ID: "test",
+				Endpoints: []config.Endpoint{
+					{
+						Regex: "abc(",
+					},
+				},
+			},
+		},
+	}
+
+	ctx.Config = cfg
+	err := prepareProject(ctx)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "project=test , regex compile error:")
+}
+
+func Test_prepareProject_MissingMandatory_Fail(t *testing.T) {
+	ctx := context.TestContext(nil)
+	ctx.WorkingDir = "/app"
+
+	cfg := &config.Config{
+		HTTP:            config.HTTPConfig{},
+		AcceptTypeFiles: []string{".1"},
+		ResizeCGI:       config.ResizeCGIConfig{},
+		Projects: []config.Project{
+			{
+				ID: "test",
+				Endpoints: []config.Endpoint{
+					{
+						Regex: "/?<not_mandatory>[0-9]{1,4}",
+					},
+				},
+			},
+		},
+	}
+
+	ctx.Config = cfg
+	err := prepareProject(ctx)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "project=test, missing mandatory group name:")
+}
+
 func TestGetRootPreRunEFn_Success(t *testing.T) {
 	ctx := context.TestContext(nil)
 	ctx.WorkingDir = "/app"
