@@ -7,7 +7,7 @@ import (
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/http/controller"
 	"github.com/reflet-devops/go-media-resizer/http/controller/health"
-	"strings"
+	"github.com/reflet-devops/go-media-resizer/http/urltools"
 )
 
 type Host struct {
@@ -27,15 +27,16 @@ func CreateServerHTTP(ctx *context.Context) *echo.Echo {
 		req := c.Request()
 		res := c.Response()
 
-		hostname := strings.Split(req.Host, ":")[0]
+		hostname := urltools.GetHostname(req.Host)
 		host := hosts[hostname]
 
 		if host == nil {
+			ctx.Logger.Debug(fmt.Sprintf("host not found: %s", hostname))
 			err = echo.ErrNotFound
 		} else {
+			ctx.Logger.Debug(fmt.Sprintf("host found: %s", hostname))
 			host.Echo.ServeHTTP(res, req)
 		}
-
 		return
 	})
 
