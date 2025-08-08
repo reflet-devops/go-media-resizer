@@ -16,9 +16,13 @@ const (
 	MimeTypeWEBM = "video/webm"
 	MimeTypeMEPG = "video/mpeg"
 
-	TypeAVIF = "avif"
-	TypeWEBP = "webp"
-	TypeJPEG = "jpeg"
-	TypePNG  = "png"
-	TypeGIF  = "gif"
+	TypeGIF     = "gif"
+	TypeMP4     = "mp4"
+	TypeMpeg    = "mpeg"
+	TypeFavicon = "favicon"
+	TypeSVG     = "mp4"
+	TypeJPEG    = "jpeg"
+	TypePNG     = "png"
+	TypeAVIF    = "avif"
+	TypeWEBP    = "webp"
 )

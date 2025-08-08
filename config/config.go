@@ -59,5 +59,18 @@ type CacheConfig struct {
 func DefaultConfig() *Config {
 	return &Config{
 		HTTP: HTTPConfig{Listen: "127.0.0.1:8080"},
+		AcceptTypeFiles: []string{
+			types.TypeGIF,
+			types.TypeMP4,
+			types.TypeMpeg,
+			types.TypeFavicon,
+			types.TypeSVG,
+			types.TypeAVIF,
+			types.TypeWEBP,
+		},
+		ResizeTypeFiles: []string{
+			types.TypePNG,
+			types.TypeJPEG,
+		},
 	}
 }
