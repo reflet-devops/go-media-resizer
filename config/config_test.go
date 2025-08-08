@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -8,7 +9,22 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	got := DefaultConfig()
 	assert.Equal(t,
-		&Config{HTTP: HTTPConfig{Listen: "127.0.0.1:8080"}},
+		&Config{HTTP: HTTPConfig{
+			Listen: "127.0.0.1:8080"},
+			AcceptTypeFiles: []string{
+				types.TypeGIF,
+				types.TypeMP4,
+				types.TypeMpeg,
+				types.TypeFavicon,
+				types.TypeSVG,
+				types.TypeAVIF,
+				types.TypeWEBP,
+			},
+			ResizeTypeFiles: []string{
+				types.TypePNG,
+				types.TypeJPEG,
+			},
+		},
 		got,
 	)
 }

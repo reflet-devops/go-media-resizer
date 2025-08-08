@@ -126,24 +126,37 @@ func initConfig(ctx *context.Context, cmd *cobra.Command) {
 func prepareProject(ctx *context.Context) error {
 	cfg := ctx.Config
 	for i, project := range cfg.Projects {
-		for i2, endpoint := range project.Endpoints {
+
+		if len(project.AcceptTypeFiles) == 0 {
+			project.AcceptTypeFiles = append(ctx.Config.AcceptTypeFiles, ctx.Config.ResizeTypeFiles...)
+		}
+
+		if len(project.ExtraAcceptTypeFiles) > 0 {
+			project.AcceptTypeFiles = append(project.AcceptTypeFiles, project.ExtraAcceptTypeFiles...)
+		}
+
+		slices.Sort(project.AcceptTypeFiles)
+		project.AcceptTypeFiles = slices.Compact(project.AcceptTypeFiles) // remove consecutive identical value
+
+		for j, endpoint := range project.Endpoints {
+
 			if endpoint.Regex != "" {
 				re, errReCompile := regexp.Compile(endpoint.Regex)
 				if errReCompile != nil {
-					return errReCompile
+					return fmt.Errorf("project=%s , regex compile error: %v", project.ID, errReCompile)
 				}
 				groupNames := re.SubexpNames()
 				// valid contains valid
 				for _, name := range MandatoryGroupNames {
 					if !slices.Contains(groupNames, name) {
-						panic(fmt.Sprintf("%s is not in regex for %v", name, endpoint))
+						return fmt.Errorf("project=%s, missing mandatory group name: %s", project.ID, name)
 					}
 				}
-				cfg.Projects[i].Endpoints[i2].CompiledRegex = re
+				project.Endpoints[j].CompiledRegex = re
 			}
 		}
-		cfg.Projects[i].PrefixPath = strings.TrimRight(project.PrefixPath, "/")
-
+		project.PrefixPath = strings.TrimRight(project.PrefixPath, "/")
+		cfg.Projects[i] = project
 	}
 	return nil
 }
