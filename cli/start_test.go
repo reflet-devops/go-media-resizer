@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -26,4 +27,23 @@ func TestGetStartRunFn_SuccessOnlyListenHTTP(t *testing.T) {
 	}()
 	time.Sleep(time.Millisecond * 500)
 	ctx.Signal() <- syscall.SIGINT
+}
+
+func TestGetStartRunFn_FailPortAlreadyBind(t *testing.T) {
+
+	ctx := context.TestContext(nil)
+
+	e := echo.New()
+	go func() {
+		_ = e.Start("127.0.0.1:0")
+	}()
+	time.Sleep(time.Millisecond * 500)
+
+	ctx.Config.HTTP.Listen = e.Listener.Addr().String()
+	cmd := GetStartCmd(ctx)
+
+	assert.Panics(t, func() {
+		_ = GetStartRunFn(ctx)(cmd, []string{})
+	})
+	_ = e.Close()
 }

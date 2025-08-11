@@ -20,9 +20,8 @@ func Test_CreateServerHTTP_Success(t *testing.T) {
 	assert.NotNil(t, e)
 	routes := e.Routes()
 
-	mandatoryRoutes := []string{
-		"/health/ping",
-	}
+	mandatoryRoutes := make([]string, len(MANDATORY_ROUTES))
+	copy(mandatoryRoutes, MANDATORY_ROUTES)
 	for _, route := range routes {
 		index := slices.Index(mandatoryRoutes, route.Path)
 		if index != -1 {
@@ -38,13 +37,11 @@ func Test_CreateServerHTTP_CGI_Success(t *testing.T) {
 	ctx := context.TestContext(nil)
 	ctx.Config.ResizeCGI.Enabled = true
 	e := CreateServerHTTP(ctx)
-
 	assert.NotNil(t, e)
 	routes := e.Routes()
 
-	mandatoryRoutes := []string{
-		"/cdn-cgi/image/:options/:source",
-	}
+	mandatoryRoutes := make([]string, len(CGI_EXTRA_ROUTES))
+	copy(mandatoryRoutes, CGI_EXTRA_ROUTES)
 	for _, route := range routes {
 		index := slices.Index(mandatoryRoutes, route.Path)
 		if index != -1 {
@@ -102,7 +99,7 @@ func Test_CreateServerHTTP_HostFound_Success(t *testing.T) {
 	_ = e.Close()
 }
 
-func Test_initRouter_WithPrefix(t *testing.T) {
+func Test_initRouter_WithPrefix_Success(t *testing.T) {
 	ctx := context.TestContext(nil)
 
 	ctx.Config.Projects = []config.Project{
@@ -132,7 +129,7 @@ func Test_initRouter_WithPrefix(t *testing.T) {
 	}
 }
 
-func Test_initRouter_NoPrefix(t *testing.T) {
+func Test_initRouter_NoPrefix_Success(t *testing.T) {
 	ctx := context.TestContext(nil)
 
 	ctx.Config.Projects = []config.Project{

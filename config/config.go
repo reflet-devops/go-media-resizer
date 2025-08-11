@@ -12,7 +12,7 @@ type Config struct {
 	ResizeTypeFiles []string        `mapstructure:"resize_type_files" validate:"required"`
 	ResizeCGI       ResizeCGIConfig `mapstructure:"resize_cgi"`
 
-	Projects []Project `mapstructure:"projects" validate:"required,unique=ID,min=1,dive"`
+	Projects []Project `mapstructure:"projects" validate:"unique-project-cfg,required,unique=ID,min=1,dive"`
 }
 
 type Project struct {

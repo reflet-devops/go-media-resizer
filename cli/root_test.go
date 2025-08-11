@@ -186,7 +186,7 @@ func TestGetRootPreRunEFn_Success(t *testing.T) {
 	cmd.SetErr(io.Discard)
 	path := ctx.WorkingDir
 	_ = ctx.Fs.Mkdir(path, 0775)
-	globalStr := "accept_type_files: ['image/png']\nresize_type_files: ['image/png']"
+	globalStr := "accept_type_files: ['txt']\nresize_type_files: ['png']"
 	projectStr := "projects: [{id: test, hostname: foo.com, storage: {type: foo}, endpoints: [{regex: '/(?<source>.*)'}]}]"
 	_ = afero.WriteFile(ctx.Fs, fmt.Sprintf("%s/config.yml", path), []byte(globalStr+"\n"+projectStr), 0644)
 	viper.Reset()
@@ -253,4 +253,23 @@ func TestGetRootPreRunEFn_FailValidator(t *testing.T) {
 	err := GetRootPreRunEFn(ctx, true)(cmd, []string{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "configuration file is not valid")
+}
+
+func TestGetRootPreRunEFn_FailPrepareProject(t *testing.T) {
+	ctx := context.TestContext(nil)
+	ctx.WorkingDir = "/app"
+	cmd := GetRootCmd(ctx)
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	path := ctx.WorkingDir
+	_ = ctx.Fs.Mkdir(path, 0775)
+	globalStr := "accept_type_files: ['txt']\nresize_type_files: ['png']"
+	// invalid regex
+	projectStr := "projects: [{id: test, hostname: foo.com, storage: {type: foo}, endpoints: [{regex: 'abc('}]}]"
+	_ = afero.WriteFile(ctx.Fs, fmt.Sprintf("%s/config.yml", path), []byte(globalStr+"\n"+projectStr), 0644)
+	viper.Reset()
+	viper.SetFs(ctx.Fs)
+	err := GetRootPreRunEFn(ctx, true)(cmd, []string{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "fail to prepare project:")
 }
