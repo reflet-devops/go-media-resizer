@@ -17,10 +17,7 @@ func TestValidateUniqueProjectConf_Success(t *testing.T) {
 			Endpoints: []config.Endpoint{
 				{Regex: "ok"},
 			},
-			Storage: struct {
-				Type   string                 `mapstructure:"type" validate:"required,excludesall=!@#$ "`
-				Config map[string]interface{} `mapstructure:"config,omitempty"`
-			}{Type: "fs", Config: nil},
+			Storage: config.StorageConfig{Type: "fs", Config: nil},
 		},
 		{
 			ID:         "bar",
@@ -29,10 +26,7 @@ func TestValidateUniqueProjectConf_Success(t *testing.T) {
 			Endpoints: []config.Endpoint{
 				{Regex: "ok"},
 			},
-			Storage: struct {
-				Type   string                 `mapstructure:"type" validate:"required,excludesall=!@#$ "`
-				Config map[string]interface{} `mapstructure:"config,omitempty"`
-			}{Type: "fs", Config: nil},
+			Storage: config.StorageConfig{Type: "fs", Config: nil},
 		},
 	}
 	validate := New(ctx)
@@ -50,10 +44,7 @@ func TestValidateUniqueProjectConf_Fail(t *testing.T) {
 			Endpoints: []config.Endpoint{
 				{Regex: "ok"},
 			},
-			Storage: struct {
-				Type   string                 `mapstructure:"type" validate:"required,excludesall=!@#$ "`
-				Config map[string]interface{} `mapstructure:"config,omitempty"`
-			}{Type: "fs", Config: nil},
+			Storage: config.StorageConfig{Type: "fs", Config: nil},
 		},
 		{
 			ID:         "bar",
@@ -62,10 +53,7 @@ func TestValidateUniqueProjectConf_Fail(t *testing.T) {
 			Endpoints: []config.Endpoint{
 				{Regex: "ok"},
 			},
-			Storage: struct {
-				Type   string                 `mapstructure:"type" validate:"required,excludesall=!@#$ "`
-				Config map[string]interface{} `mapstructure:"config,omitempty"`
-			}{Type: "fs", Config: nil},
+			Storage: config.StorageConfig{Type: "fs", Config: nil},
 		},
 	}
 	validate := New(ctx)
