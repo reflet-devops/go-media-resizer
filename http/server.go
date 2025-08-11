@@ -7,6 +7,7 @@ import (
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/http/controller"
 	"github.com/reflet-devops/go-media-resizer/http/controller/health"
+	"github.com/reflet-devops/go-media-resizer/http/middleware"
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
 )
 
@@ -32,8 +33,10 @@ func CreateServerHTTP(ctx *context.Context) *echo.Echo {
 		e.GET(route, health.GetPing)
 	}
 	if ctx.Config.ResizeCGI.Enabled {
+		cgiMiddleware := middleware.NewDomainAcceptedBySource(ctx)
 		for _, route := range CGI_EXTRA_ROUTES {
 			e.GET(route, controller.MediaCGI)
+			e.Use(cgiMiddleware.Handler)
 		}
 	}
 
