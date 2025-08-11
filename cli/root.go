@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/reflet-devops/go-media-resizer/context"
+	validatorMediaResize "github.com/reflet-devops/go-media-resizer/validator"
 	"regexp"
 	"slices"
 	"strings"
@@ -40,6 +41,7 @@ func GetRootCmd(ctx *context.Context) *cobra.Command {
 	cmd.AddCommand(
 		GetStartCmd(ctx),
 		GetVersionCmd(),
+		GetValidateCmd(ctx),
 	)
 
 	return cmd
@@ -51,7 +53,7 @@ func GetRootPreRunEFn(ctx *context.Context, validateCfg bool) func(*cobra.Comman
 		initConfig(ctx, cmd)
 
 		if validateCfg {
-			validate := validator.New()
+			validate := validatorMediaResize.New(ctx)
 			err = validate.Struct(ctx.Config)
 			if err != nil {
 
@@ -80,7 +82,7 @@ func GetRootPreRunEFn(ctx *context.Context, validateCfg bool) func(*cobra.Comman
 
 		errPreparePrj := prepareProject(ctx)
 		if errPreparePrj != nil {
-			return errPreparePrj
+			return fmt.Errorf("fail to prepare project: %v", errPreparePrj)
 		}
 
 		return nil

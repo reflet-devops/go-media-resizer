@@ -7,19 +7,34 @@ import (
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/http/controller"
 	"github.com/reflet-devops/go-media-resizer/http/controller/health"
-	"strings"
+	"github.com/reflet-devops/go-media-resizer/http/urltools"
 )
 
 type Host struct {
 	Echo *echo.Echo
 }
 
+const ROUTE_HEALTH_CHECK_PING = "/health/ping"
+const ROUTE_CGI_EXTRA_RESIZE = "/cdn-cgi/image/:options/:source"
+
+var MANDATORY_ROUTES = []string{
+	ROUTE_HEALTH_CHECK_PING,
+}
+
+var CGI_EXTRA_ROUTES = []string{
+	ROUTE_CGI_EXTRA_RESIZE,
+}
+
 func CreateServerHTTP(ctx *context.Context) *echo.Echo {
 	e := createServerHTTP()
 
-	e.GET("/health/ping", health.GetPing)
+	for _, route := range MANDATORY_ROUTES {
+		e.GET(route, health.GetPing)
+	}
 	if ctx.Config.ResizeCGI.Enabled {
-		e.GET("/cdn-cgi/image/:options/:source", controller.MediaCGI)
+		for _, route := range CGI_EXTRA_ROUTES {
+			e.GET(route, controller.MediaCGI)
+		}
 	}
 
 	hosts := initRouter(ctx, ctx.Config)
@@ -27,15 +42,16 @@ func CreateServerHTTP(ctx *context.Context) *echo.Echo {
 		req := c.Request()
 		res := c.Response()
 
-		hostname := strings.Split(req.Host, ":")[0]
+		hostname := urltools.GetHostname(req.Host)
 		host := hosts[hostname]
 
 		if host == nil {
+			ctx.Logger.Debug(fmt.Sprintf("host not found: %s", hostname))
 			err = echo.ErrNotFound
 		} else {
+			ctx.Logger.Debug(fmt.Sprintf("host found: %s", hostname))
 			host.Echo.ServeHTTP(res, req)
 		}
-
 		return
 	})
 
@@ -55,12 +71,13 @@ func initRouter(ctx *context.Context, cfg *config.Config) map[string]*Host {
 
 	for _, project := range cfg.Projects {
 		e := createServerHTTP()
-
-		if _, ok := hosts[project.Hostname]; !ok {
-			hosts[project.Hostname] = &Host{Echo: e}
+		_, found := hosts[project.Hostname]
+		if !found {
+			hosts[project.Hostname] = &Host{
+				Echo: e,
+			}
 		}
 		host := hosts[project.Hostname]
-
 		host.Echo.GET(fmt.Sprintf("%s/*", project.PrefixPath), controller.GetMedia(ctx, &project))
 		host.Echo.GET(fmt.Sprintf("%s/webhook", project.PrefixPath), controller.GetWebhook(ctx, &project))
 
