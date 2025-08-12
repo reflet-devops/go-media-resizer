@@ -7,6 +7,7 @@ import (
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/http/controller"
 	"github.com/reflet-devops/go-media-resizer/http/controller/health"
+	"github.com/reflet-devops/go-media-resizer/http/middleware"
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
 )
 
@@ -14,26 +15,27 @@ type Host struct {
 	Echo *echo.Echo
 }
 
-const ROUTE_HEALTH_CHECK_PING = "/health/ping"
-const ROUTE_CGI_EXTRA_RESIZE = "/cdn-cgi/image/:options/:source"
+const RouteHealthCheckPing = "/health/ping"
+const RouteCgiExtraResize = "/cdn-cgi/image/:options/:source"
 
-var MANDATORY_ROUTES = []string{
-	ROUTE_HEALTH_CHECK_PING,
+var MandatoryRoutes = []string{
+	RouteHealthCheckPing,
 }
 
-var CGI_EXTRA_ROUTES = []string{
-	ROUTE_CGI_EXTRA_RESIZE,
+var CgiExtraRoutes = []string{
+	RouteCgiExtraResize,
 }
 
 func CreateServerHTTP(ctx *context.Context) *echo.Echo {
 	e := createServerHTTP()
 
-	for _, route := range MANDATORY_ROUTES {
+	for _, route := range MandatoryRoutes {
 		e.GET(route, health.GetPing)
 	}
 	if ctx.Config.ResizeCGI.Enabled {
-		for _, route := range CGI_EXTRA_ROUTES {
-			e.GET(route, controller.MediaCGI)
+		cgiMiddleware := middleware.NewDomainAcceptedBySource(ctx)
+		for _, route := range CgiExtraRoutes {
+			e.GET(route, controller.MediaCGI, cgiMiddleware.Handler)
 		}
 	}
 
@@ -42,7 +44,7 @@ func CreateServerHTTP(ctx *context.Context) *echo.Echo {
 		req := c.Request()
 		res := c.Response()
 
-		hostname := urltools.GetHostname(req.Host)
+		hostname := urltools.RemovePortNumber(req.Host)
 		host := hosts[hostname]
 
 		if host == nil {
