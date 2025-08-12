@@ -6,7 +6,7 @@ import (
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"net/http"
-	"strings"
+	"slices"
 )
 
 type DomainAcceptedBySource struct {
@@ -19,28 +19,14 @@ func NewDomainAcceptedBySource(ctx *context.Context) *DomainAcceptedBySource {
 
 func (d DomainAcceptedBySource) Handler(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-
 		source := c.Param("source")
-		if strings.HasPrefix("http://", source) {
-			d.ctx.Logger.Warn(fmt.Sprintf("source has unsecured http protocol: %s", source))
-		}
-		hostname := urltools.GetHostname(source)
-
-		isAccepted := false
-
-		if d.ctx.Config.ResizeCGI.AllowSelfDomain {
-			selfHostname := urltools.GetHostname(c.Request().Host)
-			if strings.Compare(hostname, selfHostname) == 0 {
-				isAccepted = true
-			}
+		if source == "" {
+			return echo.NewHTTPError(http.StatusBadRequest)
 		}
 
-		for _, acceptedHostname := range d.ctx.Config.ResizeCGI.AllowDomains {
-			if isAccepted || strings.Compare(hostname, acceptedHostname) == 0 {
-				isAccepted = true
-				break
-			}
-		}
+		host := c.Request().Host
+
+		isAccepted := d.Validate(source, host)
 		if !isAccepted {
 			d.ctx.Logger.Error(fmt.Sprintf("domain not allowed: %s", source))
 			return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("domain not allowed: %s", source))
@@ -48,4 +34,19 @@ func (d DomainAcceptedBySource) Handler(next echo.HandlerFunc) echo.HandlerFunc 
 
 		return next(c)
 	}
+}
+
+func (d DomainAcceptedBySource) Validate(source, server string) bool {
+	srcHostname := urltools.GetHostname(source)
+	isAccepted := false
+	if d.ctx.Config.ResizeCGI.AllowSelfDomain {
+		selfHostname := urltools.GetHostname(server)
+		if srcHostname == selfHostname {
+			isAccepted = true
+		}
+	}
+	if !isAccepted && slices.Contains(d.ctx.Config.ResizeCGI.AllowDomains, srcHostname) {
+		isAccepted = true
+	}
+	return isAccepted
 }
