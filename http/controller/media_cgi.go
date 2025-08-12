@@ -3,7 +3,7 @@ package controller
 import (
 	"fmt"
 	"github.com/labstack/echo/v4"
-	"github.com/mitchellh/mapstructure"
+	"github.com/reflet-devops/go-media-resizer/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/types"
 	buildinHttp "net/http"
 	"strings"

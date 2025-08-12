@@ -2,9 +2,9 @@ package storage
 
 import (
 	"github.com/go-playground/validator/v10"
-	"github.com/mitchellh/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/spf13/afero"
 	"io"
@@ -33,6 +33,10 @@ type fs struct {
 
 func (f fs) Type() string {
 	return FsKey
+}
+
+func (f fs) GetPrefix() string {
+	return f.cfg.PrefixPath
 }
 
 func (f fs) GetFile(path string) (io.Reader, error) {

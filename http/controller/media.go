@@ -2,9 +2,9 @@ package controller
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/mitchellh/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"net/http"
 	"strings"

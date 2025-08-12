@@ -15,8 +15,13 @@ import (
 )
 
 func Test_fs_Type(t *testing.T) {
-	stateStorage := &fs{}
-	assert.Equal(t, FsKey, stateStorage.Type())
+	storage := &fs{}
+	assert.Equal(t, FsKey, storage.Type())
+}
+
+func Test_fs_GetPrefix(t *testing.T) {
+	storage := &fs{cfg: ConfigFs{PrefixPath: "/app"}}
+	assert.Equal(t, "/app", storage.GetPrefix())
 }
 
 func Test_createFsStorage(t *testing.T) {
