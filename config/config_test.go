@@ -14,8 +14,7 @@ func TestDefaultConfig(t *testing.T) {
 			AcceptTypeFiles: []string{
 				types.TypeGIF,
 				types.TypeMP4,
-				types.TypeMpeg,
-				types.TypeFavicon,
+				types.TypeMEPG,
 				types.TypeSVG,
 				types.TypeAVIF,
 				types.TypeWEBP,
