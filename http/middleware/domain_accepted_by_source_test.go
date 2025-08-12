@@ -6,6 +6,7 @@ import (
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/stretchr/testify/assert"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
@@ -68,23 +69,10 @@ func TestDomainAcceptedBySource_Validate(t *testing.T) {
 func TestDomainAcceptedBySource_Handler_AllowSelfDomain(t *testing.T) {
 	ctx := context.TestContext(nil)
 	acceptedHostnames := []string{}
-	path := "/:source"
-
 	ctx.Config.ResizeCGI.AllowSelfDomain = true
 	ctx.Config.ResizeCGI.AllowDomains = acceptedHostnames
 	domainAcceptedBySource := NewDomainAcceptedBySource(ctx)
 	e := echo.New()
-	e.HideBanner = true
-	e.HidePort = true
-	e.GET(path, func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
-	})
-	e.Use(domainAcceptedBySource.Handler)
-
-	go func() {
-		_ = e.Start("127.0.0.1:8080")
-	}()
-	time.Sleep(time.Millisecond * 500)
 
 	tests := []struct {
 		name   string
@@ -109,11 +97,18 @@ func TestDomainAcceptedBySource_Handler_AllowSelfDomain(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, _ := http.Get(fmt.Sprintf("http://%s/%s", e.Server.Addr, tt.source))
-			assert.Equal(t, tt.want, resp.StatusCode)
+			req := httptest.NewRequest(http.MethodGet, "/"+tt.source, nil)
+			req.Host = "127.0.0.1"
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetParamNames("source")
+			c.SetParamValues(tt.source)
+			c.SetPath("/:source")
+
+			_ = domainAcceptedBySource.Handler(c.Handler())(c)
+			assert.Equal(t, tt.want, rec.Code)
 		})
 	}
-	_ = e.Close()
 }
 
 func TestDomainAcceptedBySource_Handler_AllowDomains(t *testing.T) {
