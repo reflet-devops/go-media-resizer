@@ -1,0 +1,21 @@
+services:
+  minio:
+    image: bitnami/minio:2025.4.22
+    container_name: ${COMPOSE_PROJECT_NAME}-minio
+    hostname: ${COMPOSE_PROJECT_NAME}-minio
+    ports:
+      - ${MEDIA_RESIZER_MINIO_API:-9000}:9000
+      - ${MEDIA_RESIZER_MINIO_CONSOLE:-9001}:9001
+    environment:
+      - BITNAMI_DEBUG=true
+      - MINIO_SERVER_ACCESS_KEY=access
+      - MINIO_SERVER_SECRET_KEY=secret
+      - MINIO_BROWSER=true
+      - MINIO_ROOT_USER=root
+      - MINIO_ROOT_PASSWORD=rootroot
+      - MINIO_DEFAULT_BUCKETS=main
+    volumes:
+      - minio-data:/bitnami/minio/data
+
+volumes:
+  minio-data:
