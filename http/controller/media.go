@@ -33,7 +33,8 @@ func GetMedia(ctx *context.Context, project *config.Project) func(c echo.Context
 }
 
 func findMatch(endpoint *config.Endpoint, projectCfg *config.Project, path string) (*types.ResizeOption, error) {
-	originType := urltools.GetExtension(path)
+	originExt := urltools.GetExtension(path)
+	originType := types.GetType(originExt)
 
 	fileTypeIsValid := types.ValidateType(originType, projectCfg.AcceptTypeFiles)
 	if !fileTypeIsValid {

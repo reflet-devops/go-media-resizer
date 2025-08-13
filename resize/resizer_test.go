@@ -1,4 +1,4 @@
-package format
+package resize
 
 import (
 	"crypto/sha256"
@@ -13,38 +13,41 @@ import (
 
 const ImgPaysageOrigShaSum = "28f673a1eedbf46bb028d9229e9dd658e9482803e5de31b017a346206d5e5a0e"
 
-func TestFormat(t *testing.T) {
-
+func TestResize(t *testing.T) {
 	tests := []struct {
 		name    string
-		opts    *types.ResizeOption
 		file    io.Reader
+		opts    *types.ResizeOption
 		want    string
 		wantErr assert.ErrorAssertionFunc
 	}{
 		{
-			name:    "successNoFormat",
-			opts:    &types.ResizeOption{Format: types.TypeText},
+			name:    "successWithNoResize",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Source: "/fixtures/paysage.jpg"},
 			want:    ImgPaysageOrigShaSum,
 			wantErr: assert.NoError,
 		},
 		{
-			name:    "successFormatAvif",
-			opts:    &types.ResizeOption{Format: types.TypeAVIF},
-			want:    "8c12ba0d98997071919dfc4c98a2c02132787d9ec5f4934b66e2e657c442e890",
+			name:    "successWithResize",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Source: "/fixtures/paysage.jpg", Height: 100, Width: 100},
+			want:    "2bd761ee4b02f7ccbfc005e57b73b6a63f5731f723b442f9b5a8bb0abdef41b7",
 			wantErr: assert.NoError,
 		},
 		{
-			name:    "successFormatWebP",
-			opts:    &types.ResizeOption{Format: types.TypeWEBP},
-			want:    "9597c4feb6b4fdda1e2a4184727a665dea0609283b5b3d76e8de6f5fd5a199c9",
+			name:    "successWithFitCrop",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: TypeFitCrop, Source: "/fixtures/paysage.jpg", Height: 100, Width: 100},
+			want:    "5e932cfd7e6451d2289ce0d9cab7384cf07d80ca4b5b96e677f8a0cd9e19c7f8",
 			wantErr: assert.NoError,
 		},
 		{
-			name:    "failedFormat",
-			opts:    &types.ResizeOption{Format: types.TypeWEBP},
+			name:    "failedWithUnknownFormat",
+			opts:    &types.ResizeOption{OriginFormat: "unknow", Source: "/fixtures/paysage.jpg", Height: 100},
+			wantErr: assert.Error,
+		},
+		{
+			name:    "failedToDecode",
 			file:    strings.NewReader("unknown"),
-			want:    "",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Source: "/fixtures/paysage.jpg", Height: 100},
 			wantErr: assert.Error,
 		},
 	}
@@ -57,7 +60,7 @@ func TestFormat(t *testing.T) {
 				file = tt.file
 			}
 
-			got, err := Format(file, tt.opts)
+			got, err := Resize(file, tt.opts)
 			tt.wantErr(t, err)
 			if got != nil {
 				hasher := sha256.New()
