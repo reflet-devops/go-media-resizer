@@ -1,6 +1,9 @@
 package urltools
 
-import "strings"
+import (
+	"path/filepath"
+	"strings"
+)
 
 func GetHostname(url string) string {
 
@@ -12,4 +15,8 @@ func GetHostname(url string) string {
 
 func RemovePortNumber(host string) string {
 	return strings.Split(host, ":")[0]
+}
+
+func GetExtension(url string) string {
+	return filepath.Ext(url)
 }

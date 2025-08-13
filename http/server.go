@@ -35,7 +35,7 @@ func CreateServerHTTP(ctx *context.Context) *echo.Echo {
 	if ctx.Config.ResizeCGI.Enabled {
 		cgiMiddleware := middleware.NewDomainAcceptedBySource(ctx)
 		for _, route := range CgiExtraRoutes {
-			e.GET(route, controller.MediaCGI, cgiMiddleware.Handler)
+			e.GET(route, controller.GetMediaCGI(ctx), cgiMiddleware.Handler)
 		}
 	}
 
