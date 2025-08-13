@@ -1,5 +1,7 @@
 package types
 
+import "slices"
+
 const (
 	MimeTypeAVIF = "image/avif"
 	MimeTypeWEBP = "image/webp"
@@ -136,4 +138,8 @@ func GetType(extension string) string {
 	default:
 		return TypeDefault
 	}
+}
+
+func ValidateType(fileType string, acceptedTypes []string) bool {
+	return slices.Contains(acceptedTypes, fileType)
 }

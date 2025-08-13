@@ -65,7 +65,7 @@ func TestDomainAcceptedBySource_Validate(t *testing.T) {
 	}
 }
 
-func TestDomainAcceptedBySource_Handler_AllowSelfDomain(t *testing.T) {
+func TestDomainAcceptedBySource_Handler(t *testing.T) {
 	ctx := context.TestContext(nil)
 	domainAcceptedBySource := NewDomainAcceptedBySource(ctx)
 	e := echo.New()

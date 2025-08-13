@@ -45,3 +45,43 @@ func Test_GetHostname(t *testing.T) {
 		})
 	}
 }
+
+func Test_GetExtension(t *testing.T) {
+	tests := []struct {
+		name string
+		arg  string
+		want string
+	}{
+		{
+			name: "single level resource path",
+			arg:  "http://hostname/filename.txt",
+			want: ".txt",
+		},
+		{
+			name: "multi-level resource path",
+			arg:  "http://hostname/path/to/filename.txt",
+			want: ".txt",
+		},
+		{
+			name: "multi-level resource path",
+			arg:  "http://hostname/path/to/filename.png.pdf.txt",
+			want: ".txt",
+		},
+		{
+			name: "no extension",
+			arg:  "http://hostname/filename",
+			want: "",
+		},
+		{
+			name: "empty resource path",
+			arg:  "http://hostname/",
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetExtension(tt.arg)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

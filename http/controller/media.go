@@ -1,9 +1,11 @@
 package controller
 
 import (
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"github.com/reflet-devops/go-media-resizer/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"net/http"
@@ -14,10 +16,10 @@ func GetMedia(ctx *context.Context, project *config.Project) func(c echo.Context
 	return func(c echo.Context) error {
 		requestPath := strings.Replace(c.Request().RequestURI, project.PrefixPath, "", 1)
 		for _, endpoint := range project.Endpoints {
-			opts, errMatch := findMatch(&endpoint, requestPath)
+			opts, errMatch := findMatch(&endpoint, project, requestPath)
 			if errMatch != nil {
-				ctx.Logger.Debug(errMatch.Error())
-				return c.NoContent(http.StatusNotFound)
+				ctx.Logger.Debug(fmt.Sprintf("%s: %s", errMatch.Error(), requestPath))
+				return errMatch
 			}
 
 			if opts == nil {
@@ -30,9 +32,16 @@ func GetMedia(ctx *context.Context, project *config.Project) func(c echo.Context
 	}
 }
 
-func findMatch(endpoint *config.Endpoint, path string) (*types.ResizeOption, error) {
+func findMatch(endpoint *config.Endpoint, projectCfg *config.Project, path string) (*types.ResizeOption, error) {
+	originType := urltools.GetExtension(path)
+
+	fileTypeIsValid := types.ValidateType(originType, projectCfg.AcceptTypeFiles)
+	if !fileTypeIsValid {
+		return nil, HTTPErrorFileTypeNotAccepted
+	}
+
 	if endpoint.CompiledRegex == nil {
-		return &types.ResizeOption{Source: path}, nil
+		return &types.ResizeOption{Source: path, OriginFormat: originType}, nil
 	}
 
 	re := endpoint.CompiledRegex
@@ -53,6 +62,8 @@ func findMatch(endpoint *config.Endpoint, path string) (*types.ResizeOption, err
 	}
 
 	opts := endpoint.DefaultResizeOpts
+	opts.OriginFormat = originType
+
 	err := mapstructure.Decode(params, &opts)
 
 	return &opts, err
