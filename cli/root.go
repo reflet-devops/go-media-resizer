@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/types"
 	validatorMediaResize "github.com/reflet-devops/go-media-resizer/validator"
 	"regexp"
 	"slices"
@@ -141,6 +142,10 @@ func prepareProject(ctx *context.Context) error {
 		project.AcceptTypeFiles = slices.Compact(project.AcceptTypeFiles) // remove consecutive identical value
 
 		for j, endpoint := range project.Endpoints {
+
+			if endpoint.DefaultResizeOpts.Format == "" {
+				project.Endpoints[j].DefaultResizeOpts.Format = types.TypeFormatAuto
+			}
 
 			if endpoint.Regex != "" {
 				re, errReCompile := regexp.Compile(endpoint.Regex)

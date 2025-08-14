@@ -41,9 +41,10 @@ type HTTPConfig struct {
 }
 
 type ResizeCGIConfig struct {
-	Enabled         bool     `mapstructure:"enabled"`
-	AllowDomains    []string `mapstructure:"allow_domains"`
-	AllowSelfDomain bool     `mapstructure:"allow_self_domain"`
+	Enabled           bool               `mapstructure:"enabled"`
+	AllowDomains      []string           `mapstructure:"allow_domains"`
+	AllowSelfDomain   bool               `mapstructure:"allow_self_domain"`
+	DefaultResizeOpts types.ResizeOption `mapstructure:"default_resize"`
 }
 
 type StorageConfig struct {
@@ -59,6 +60,9 @@ type CacheConfig struct {
 func DefaultConfig() *Config {
 	return &Config{
 		HTTP: HTTPConfig{Listen: "127.0.0.1:8080"},
+		ResizeCGI: ResizeCGIConfig{
+			DefaultResizeOpts: types.ResizeOption{Format: types.TypeFormatAuto},
+		},
 		AcceptTypeFiles: []string{
 			types.TypeGIF,
 			types.TypeMP4,

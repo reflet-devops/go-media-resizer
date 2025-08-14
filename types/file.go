@@ -62,6 +62,8 @@ const (
 	ExtensionMP4  = ".mp4"
 	ExtensionWEBM = ".webm"
 	ExtensionMEPG = ".mpeg"
+
+	TypeFormatAuto = "auto"
 )
 
 func GetMimeType(code string) string {
