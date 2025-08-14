@@ -11,6 +11,9 @@ func TestDefaultConfig(t *testing.T) {
 	assert.Equal(t,
 		&Config{HTTP: HTTPConfig{
 			Listen: "127.0.0.1:8080"},
+			ResizeCGI: ResizeCGIConfig{
+				DefaultResizeOpts: types.ResizeOption{Format: types.TypeFormatAuto},
+			},
 			AcceptTypeFiles: []string{
 				types.TypeGIF,
 				types.TypeMP4,

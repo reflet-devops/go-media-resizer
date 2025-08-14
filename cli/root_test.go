@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"io"
+	"regexp"
 	"testing"
 )
 
@@ -89,6 +91,9 @@ func Test_prepareProject_Success(t *testing.T) {
 	ctx := context.TestContext(nil)
 	ctx.WorkingDir = "/app"
 
+	regexStr := "(?<source>.*)"
+	re, errReCompile := regexp.Compile(regexStr)
+	assert.NoError(t, errReCompile)
 	cfg := &config.Config{
 		HTTP:            config.HTTPConfig{},
 		AcceptTypeFiles: []string{".1"},
@@ -99,6 +104,9 @@ func Test_prepareProject_Success(t *testing.T) {
 				ID:                   "overwrite",
 				AcceptTypeFiles:      []string{".4"},
 				ExtraAcceptTypeFiles: nil,
+				Endpoints: []config.Endpoint{
+					{Regex: regexStr},
+				},
 			},
 			{
 				ID:                   "concat",
@@ -112,6 +120,9 @@ func Test_prepareProject_Success(t *testing.T) {
 			ID:                   "overwrite",
 			AcceptTypeFiles:      []string{".4"},
 			ExtraAcceptTypeFiles: nil,
+			Endpoints: []config.Endpoint{
+				{Regex: regexStr, DefaultResizeOpts: types.ResizeOption{Format: types.TypeFormatAuto}, CompiledRegex: re},
+			},
 		},
 		{
 			ID:                   "concat",
