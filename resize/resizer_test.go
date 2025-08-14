@@ -1,8 +1,7 @@
 package resize
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"github.com/reflet-devops/go-media-resizer/hash"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -96,10 +95,8 @@ func TestResize(t *testing.T) {
 			got, err := Resize(file, tt.opts)
 			tt.wantErr(t, err)
 			if got != nil {
-				hasher := sha256.New()
-				_, err = io.Copy(hasher, got)
-				assert.NoError(t, err)
-				shaSum := hex.EncodeToString(hasher.Sum(nil))
+				shaSum, errSha := hash.GenerateSHA256(got)
+				assert.NoError(t, errSha)
 				assert.Equal(t, tt.want, shaSum)
 			}
 		})

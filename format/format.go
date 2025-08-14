@@ -24,7 +24,7 @@ func Format(file io.Reader, opts *types.ResizeOption) (io.Reader, error) {
 			return nil, fmt.Errorf("failed to decode %s to format: %v", opts.Source, errDecode)
 		}
 		if opts.Format == types.TypeAVIF {
-			errFormat = avif.Encode(w, img, nil)
+			errFormat = avif.Encode(w, img, &avif.Options{Speed: 8, Quality: 60})
 		} else if opts.Format == types.TypeWEBP {
 			errFormat = webp.Encode(w, img, nil)
 		}
