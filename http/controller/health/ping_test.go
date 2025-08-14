@@ -10,6 +10,8 @@ import (
 
 func TestGetPing(t *testing.T) {
 	e := echo.New()
+	e.HideBanner = true
+	e.HidePort = true
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)

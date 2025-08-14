@@ -84,6 +84,8 @@ func GetRootPreRunEFn(ctx *context.Context, validateCfg bool) func(*cobra.Comman
 			ctx.LogLevel.Set(level)
 		}
 
+		ctx.Config.AcceptTypeFiles = append(ctx.Config.AcceptTypeFiles, ctx.Config.ResizeTypeFiles...)
+
 		errPreparePrj := prepareProject(ctx)
 		if errPreparePrj != nil {
 			return fmt.Errorf("fail to prepare project: %v", errPreparePrj)

@@ -34,6 +34,8 @@ func TestGetStartRunFn_FailPortAlreadyBind(t *testing.T) {
 	ctx := context.TestContext(nil)
 
 	e := echo.New()
+	e.HideBanner = true
+	e.HidePort = true
 	go func() {
 		_ = e.Start("127.0.0.1:0")
 	}()

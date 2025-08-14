@@ -15,17 +15,23 @@ import (
 func Test_GetMedia(t *testing.T) {
 	ctx := context.TestContext(nil)
 	e := echo.New()
+	e.HideBanner = true
+	e.HidePort = true
 
 	tests := []struct {
 		name     string
 		resource string
-		want     error
+		wantFn   func(t *testing.T, rec *httptest.ResponseRecorder)
 		prjConf  *config.Project
 	}{
 		{
 			name:     "FileTypeNotAcceptedFail",
 			resource: "resource.txt",
-			want:     echo.NewHTTPError(http.StatusBadRequest, "file type not accepted"),
+			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusBadRequest, rec.Code)
+				assert.Contains(t, rec.Header().Get(echo.HeaderContentType), types.MimeTypeText)
+				assert.Equal(t, []byte("file type not accepted"), rec.Body.Bytes())
+			},
 			prjConf: &config.Project{
 				AcceptTypeFiles: []string{types.TypePNG},
 				Endpoints: []config.Endpoint{
@@ -47,10 +53,9 @@ func Test_GetMedia(t *testing.T) {
 			c := e.NewContext(req, rec)
 			c.SetPath(fmt.Sprintf("/%s", tt.resource))
 
-			fn := GetMedia(ctx, tt.prjConf)
-
-			err := fn(c)
-			assert.Equal(t, tt.want, err)
+			err := GetMedia(ctx, tt.prjConf)(c)
+			assert.NoError(t, err)
+			tt.wantFn(t, rec)
 		})
 	}
 }

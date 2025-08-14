@@ -17,7 +17,7 @@ func GetMedia(ctx *context.Context, project *config.Project) func(c echo.Context
 			opts, errMatch := parser.ParseOption(&endpoint, project, requestPath)
 			if errMatch != nil {
 				ctx.Logger.Debug(fmt.Sprintf("%s: %s", errMatch.Error(), requestPath))
-				return echo.NewHTTPError(http.StatusBadRequest, errMatch.Error())
+				return c.String(http.StatusBadRequest, errMatch.Error())
 			}
 
 			if opts == nil {
