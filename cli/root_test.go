@@ -284,3 +284,93 @@ func TestGetRootPreRunEFn_FailPrepareProject(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "fail to prepare project:")
 }
+
+func Test_validRegexTest(t *testing.T) {
+
+	tests := []struct {
+		name            string
+		project         config.Project
+		endpoint        config.Endpoint
+		wantErr         bool
+		wantErrContains string
+	}{
+		{
+			name:     "successWithEmptyRegexTests",
+			project:  config.Project{AcceptTypeFiles: []string{types.TypePNG}},
+			endpoint: config.Endpoint{},
+			wantErr:  false,
+		},
+		{
+			name:    "successWithOnlySourceOption",
+			project: config.Project{AcceptTypeFiles: []string{types.TypePNG}},
+			endpoint: config.Endpoint{
+				Regex: "(?<source>.*)",
+				RegexTests: []config.RegexTest{
+					{Path: "/media/image.png", ResultOpts: types.ResizeOption{OriginFormat: types.TypePNG, Source: "/media/image.png"}},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:    "successWithSourceFormatWithHeightOption",
+			project: config.Project{AcceptTypeFiles: []string{types.TypePNG}},
+			endpoint: config.Endpoint{
+				Regex: "(\\/(?<width>[0-9]{1,4})?(x(?<height>[0-9]{1,4}))?)(?<source>.*)",
+				RegexTests: []config.RegexTest{
+					{Path: "/500x500/media/image.png", ResultOpts: types.ResizeOption{OriginFormat: types.TypePNG, Source: "/media/image.png", Width: 500, Height: 500}},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:    "failWithTypeNotAccepted",
+			project: config.Project{AcceptTypeFiles: []string{}},
+			endpoint: config.Endpoint{
+				Regex: "(\\/(?<width>[0-9]{1,4})(\\/(?<height>[0-9]{1,4}))?)\\/(?<source>.*)",
+				RegexTests: []config.RegexTest{
+					{Path: "/500x500/media/image.png", ResultOpts: types.ResizeOption{OriginFormat: types.TypePNG, Source: "/media/image.png"}},
+				},
+			},
+			wantErr:         true,
+			wantErrContains: "fail to validate RegexTest /500x500/media/image.png with error: file type not accepted",
+		},
+		{
+			name:    "failWithPathNotMatch",
+			project: config.Project{AcceptTypeFiles: []string{types.TypePNG}},
+			endpoint: config.Endpoint{
+				Regex: "(\\/(?<width>[0-9]{1,4})(\\/(?<height>[0-9]{1,4}))?)\\/(?<source>.*)",
+				RegexTests: []config.RegexTest{
+					{Path: "/500x500/media/image.png", ResultOpts: types.ResizeOption{OriginFormat: types.TypePNG, Source: "/media/image.png"}},
+				},
+			},
+			wantErr:         true,
+			wantErrContains: "fail to validate RegexTest /500x500/media/image.png path not match",
+		},
+		{
+			name:    "failWithOptNotEqual",
+			project: config.Project{AcceptTypeFiles: []string{types.TypePNG}},
+			endpoint: config.Endpoint{
+				Regex: "(\\/(?<width>[0-9]{1,4}))?(\\/(?<quality>[0-9]{1,4}))?(\\/(?<height>[0-9]{1,4}))?(?<source>.*)",
+				RegexTests: []config.RegexTest{
+					{Path: "/500/500/media/image.png", ResultOpts: types.ResizeOption{OriginFormat: types.TypePNG, Source: "/media/image.png", Width: 500, Height: 500, Quality: 80}},
+				},
+			},
+			wantErr:         true,
+			wantErrContains: "fail to validate RegexTest /500/500/media/image.png",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			re, errReCompile := regexp.Compile(tt.endpoint.Regex)
+			tt.endpoint.CompiledRegex = re
+			err := validRegexTest(tt.project, tt.endpoint)
+			assert.NoError(t, errReCompile)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrContains)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

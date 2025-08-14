@@ -5,7 +5,7 @@ type ResizeOption struct {
 	Format       string
 	Width        int
 	Height       int
-	Quality      string
+	Quality      int
 	Fit          string
 	Source       string
 }

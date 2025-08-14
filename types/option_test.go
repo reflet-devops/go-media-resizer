@@ -11,7 +11,7 @@ func TestResizeOption_NeedResize(t *testing.T) {
 		Format       string
 		Width        int
 		Height       int
-		Quality      string
+		Quality      int
 		Fit          string
 		Source       string
 	}
