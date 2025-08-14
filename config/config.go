@@ -34,6 +34,8 @@ type Endpoint struct {
 	DefaultResizeOpts types.ResizeOption `mapstructure:"default_resize"`
 
 	CompiledRegex *regexp.Regexp
+
+	RegexTests []RegexTest `mapstructure:"regex_tests" validate:"dive"`
 }
 
 type HTTPConfig struct {
@@ -55,6 +57,11 @@ type StorageConfig struct {
 type CacheConfig struct {
 	Type   string                 `mapstructure:"type" validate:"required,excludesall=!@#$ "`
 	Config map[string]interface{} `mapstructure:"config,omitempty"`
+}
+
+type RegexTest struct {
+	Path       string             `mapstructure:"path" validate:"required"`
+	ResultOpts types.ResizeOption `mapstructure:"result_opts" validate:"required"`
 }
 
 func DefaultConfig() *Config {

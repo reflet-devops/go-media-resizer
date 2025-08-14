@@ -4,9 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-playground/validator/v10"
+	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/parser"
 	"github.com/reflet-devops/go-media-resizer/types"
 	validatorMediaResize "github.com/reflet-devops/go-media-resizer/validator"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -160,10 +163,37 @@ func prepareProject(ctx *context.Context) error {
 					}
 				}
 				project.Endpoints[j].CompiledRegex = re
+
+				if errTestRegex := validRegexTest(project, endpoint); errTestRegex != nil {
+					return fmt.Errorf("project=%s, regex test isn't valid %s: %v", project.ID, endpoint.Regex, errTestRegex)
+				}
 			}
 		}
 		project.PrefixPath = strings.TrimRight(project.PrefixPath, "/")
 		cfg.Projects[i] = project
 	}
+	return nil
+}
+
+func validRegexTest(project config.Project, endpoint config.Endpoint) error {
+	if len(endpoint.RegexTests) == 0 || endpoint.CompiledRegex == nil {
+		return nil
+	}
+
+	for _, test := range endpoint.RegexTests {
+		opts, err := parser.ParseOption(&endpoint, &project, test.Path)
+		if err != nil {
+			return fmt.Errorf("fail to validate RegexTest %s with error: %v", test.Path, err)
+		}
+
+		if opts == nil {
+			return fmt.Errorf("fail to validate RegexTest %s path not match", test.Path)
+		}
+
+		if !reflect.DeepEqual(opts, &test.ResultOpts) {
+			return fmt.Errorf("fail to validate RegexTest %s excepted: %v, actual: %v", test.Path, test.ResultOpts, opts)
+		}
+	}
+
 	return nil
 }
