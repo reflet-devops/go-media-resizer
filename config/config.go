@@ -3,7 +3,10 @@ package config
 import (
 	"github.com/reflet-devops/go-media-resizer/types"
 	"regexp"
+	"time"
 )
+
+const DefaultRequestTimeout = 10 * time.Second
 
 type Config struct {
 	HTTP HTTPConfig `mapstructure:"http" validate:"required"`
@@ -12,7 +15,8 @@ type Config struct {
 	ResizeTypeFiles []string        `mapstructure:"resize_type_files" validate:"required"`
 	ResizeCGI       ResizeCGIConfig `mapstructure:"resize_cgi"`
 
-	Projects []Project `mapstructure:"projects" validate:"unique-project-cfg,required,unique=ID,min=1,dive"`
+	RequestTimeout time.Duration `mapstructure:"request_timeout"`
+	Projects       []Project     `mapstructure:"projects" validate:"unique-project-cfg,required,unique=ID,min=1,dive"`
 }
 
 type Project struct {
@@ -82,5 +86,6 @@ func DefaultConfig() *Config {
 			types.TypePNG,
 			types.TypeJPEG,
 		},
+		RequestTimeout: DefaultRequestTimeout,
 	}
 }

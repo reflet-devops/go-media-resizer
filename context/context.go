@@ -2,7 +2,9 @@ package context
 
 import (
 	"github.com/reflet-devops/go-media-resizer/config"
+	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/spf13/afero"
+	"github.com/valyala/fasthttp"
 	"io"
 	"log/slog"
 	"os"
@@ -17,6 +19,7 @@ type Context struct {
 	Fs         afero.Fs
 	sigs       chan os.Signal
 	done       chan bool
+	HttpClient types.Client
 
 	Config *config.Config
 }
@@ -67,6 +70,7 @@ func DefaultContext() *Context {
 		done:       make(chan bool),
 		sigs:       sigs,
 		Config:     config.DefaultConfig(),
+		HttpClient: &fasthttp.Client{},
 	}
 }
 

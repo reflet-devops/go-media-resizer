@@ -1,8 +1,13 @@
 package controller
 
 import (
+	"bytes"
+	"fmt"
+	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/stretchr/testify/assert"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -75,4 +80,22 @@ func TestDetectFormatFromHeaderAccept(t *testing.T) {
 			assert.Equal(t, tt.want, tt.opts)
 		})
 	}
+}
+
+func TestSendStream(t *testing.T) {
+	e := echo.New()
+	opts := &types.ResizeOption{Format: types.TypePNG}
+	content := []byte("hello")
+	buffer := bytes.NewBuffer(content)
+
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://127.0.0.1/"), nil)
+	req.Host = "127.0.0.1"
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	err := SendStream(c, opts, buffer)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, types.MimeTypePNG, rec.Header().Get(echo.HeaderContentType))
+	assert.Equal(t, content, rec.Body.Bytes())
 }

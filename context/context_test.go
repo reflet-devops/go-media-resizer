@@ -4,6 +4,7 @@ import (
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/valyala/fasthttp"
 	"io"
 	"log/slog"
 	"os"
@@ -28,6 +29,7 @@ func TestDefaultContext_Success(t *testing.T) {
 		LogLevel:   level,
 		Fs:         fs,
 		Config:     config.DefaultConfig(),
+		HttpClient: &fasthttp.Client{},
 	}
 	got := DefaultContext()
 	assert.NotNil(t, got.done)
