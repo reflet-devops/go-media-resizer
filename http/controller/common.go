@@ -3,6 +3,7 @@ package controller
 import (
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/types"
+	"io"
 	"net/http"
 	"slices"
 	"strings"
@@ -22,4 +23,9 @@ func DetectFormatFromHeaderAccept(acceptHeaderValue string, opts *types.ResizeOp
 	}
 
 	opts.Format = opts.OriginFormat
+}
+
+func SendStream(c echo.Context, opts *types.ResizeOption, content io.Reader) error {
+	contentType := types.GetMimeType(opts.Format)
+	return c.Stream(http.StatusOK, contentType, content)
 }

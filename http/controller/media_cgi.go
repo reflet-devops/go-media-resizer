@@ -1,12 +1,14 @@
 package controller
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"github.com/reflet-devops/go-media-resizer/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/types"
+	"github.com/valyala/fasthttp"
 	buildinHttp "net/http"
 	"strings"
 )
@@ -40,8 +42,42 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 		if err != nil {
 			return c.JSON(buildinHttp.StatusInternalServerError, err.Error())
 		}
+		if opts.Format == "" {
+			opts.Format = opts.OriginFormat
+		}
 
-		return c.JSON(buildinHttp.StatusNotImplemented, fmt.Sprintf("opts: %v source: %s", opts, source))
+		resource, err := fetchCGIResource(ctx, source)
+		if err != nil {
+			return c.JSON(buildinHttp.StatusInternalServerError, err.Error())
+		}
+		buffer := bytes.NewBuffer(resource)
+		return SendStream(c, opts, buffer)
+	}
+}
+
+func fetchCGIResource(ctx *context.Context, source string) ([]byte, error) {
+	req := fasthttp.AcquireRequest()
+	resp := fasthttp.AcquireResponse()
+	defer func() {
+		if req != nil {
+			fasthttp.ReleaseRequest(req)
+		}
+		if resp != nil {
+			fasthttp.ReleaseResponse(resp)
+		}
+	}()
+	req.Header.SetMethod(buildinHttp.MethodGet)
+	req.SetRequestURI(source)
+
+	ctx.Logger.Debug(fmt.Sprintf("fetchCGIResource: GET %s", source))
+	err := ctx.HttpClient.DoTimeout(req, resp, ctx.Config.RequestTimeout)
+
+	if err != nil {
+		return nil, fmt.Errorf("fetchCGIResource: GET %s: error with request: %v", source, err)
 	}
 
+	if resp.StatusCode() != fasthttp.StatusOK {
+		return nil, fmt.Errorf("fetchCGIResource: GET %s: invalid status code status code: %d", source, resp.StatusCode())
+	}
+	return resp.Body(), nil
 }
