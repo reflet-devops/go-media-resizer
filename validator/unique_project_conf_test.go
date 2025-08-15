@@ -31,7 +31,7 @@ func TestValidateUniqueProjectConf_Success(t *testing.T) {
 	}
 	validate := New(ctx)
 	err := validate.Struct(ctx.Config)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestValidateUniqueProjectConf_Fail(t *testing.T) {
@@ -58,6 +58,17 @@ func TestValidateUniqueProjectConf_Fail(t *testing.T) {
 	}
 	validate := New(ctx)
 	err := validate.Struct(ctx.Config)
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "'Projects' failed on the 'unique-project-cfg'")
+}
+
+func TestValidateUniqueProjectConf_FailInvalidType(t *testing.T) {
+	ctx := context.TestContext(nil)
+	type dumpy struct {
+		Foo string `validate:"unique-project-cfg"`
+	}
+	validate := New(ctx)
+	err := validate.Struct(dumpy{Foo: "unique-project-cfg"})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Key: 'dumpy.Foo' Error:Field validation for 'Foo' failed on the 'unique-project-cfg' tag")
 }

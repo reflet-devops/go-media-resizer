@@ -22,7 +22,9 @@ var TimeLocationGMT *time.Location
 func init() {
 	var err error
 	TimeLocationGMT, err = time.LoadLocation("GMT")
-	panic(err)
+	if err != nil {
+		panic(err)
+	}
 }
 
 var HTTPErrorFileTypeNotAccepted = echo.NewHTTPError(http.StatusForbidden, "file type not accepted")

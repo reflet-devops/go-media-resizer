@@ -17,6 +17,7 @@ func TestDefaultConfig(t *testing.T) {
 				DefaultResizeOpts: types.ResizeOption{Format: types.TypeFormatAuto},
 			},
 			AcceptTypeFiles: []string{
+				types.TypeText,
 				types.TypeGIF,
 				types.TypeMP4,
 				types.TypeMEPG,

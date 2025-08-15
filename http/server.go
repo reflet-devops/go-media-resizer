@@ -9,6 +9,7 @@ import (
 	"github.com/reflet-devops/go-media-resizer/http/controller/health"
 	"github.com/reflet-devops/go-media-resizer/http/middleware"
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
+	"github.com/reflet-devops/go-media-resizer/storage"
 )
 
 type Host struct {
@@ -26,7 +27,7 @@ var CgiExtraRoutes = []string{
 	RouteCgiExtraResize,
 }
 
-func CreateServerHTTP(ctx *context.Context) *echo.Echo {
+func CreateServerHTTP(ctx *context.Context) (*echo.Echo, error) {
 	e := createServerHTTP()
 
 	for _, route := range MandatoryRoutes {
@@ -39,7 +40,11 @@ func CreateServerHTTP(ctx *context.Context) *echo.Echo {
 		}
 	}
 
-	hosts := initRouter(ctx, ctx.Config)
+	hosts, err := initRouter(ctx, ctx.Config)
+	if err != nil {
+		return e, err
+	}
+
 	e.Any("/*", func(c echo.Context) (err error) {
 		req := c.Request()
 		res := c.Response()
@@ -57,7 +62,7 @@ func CreateServerHTTP(ctx *context.Context) *echo.Echo {
 		return
 	})
 
-	return e
+	return e, nil
 }
 
 func createServerHTTP() *echo.Echo {
@@ -68,7 +73,7 @@ func createServerHTTP() *echo.Echo {
 	return e
 }
 
-func initRouter(ctx *context.Context, cfg *config.Config) map[string]*Host {
+func initRouter(ctx *context.Context, cfg *config.Config) (map[string]*Host, error) {
 	hosts := map[string]*Host{}
 
 	for _, project := range cfg.Projects {
@@ -80,9 +85,13 @@ func initRouter(ctx *context.Context, cfg *config.Config) map[string]*Host {
 			}
 		}
 		host := hosts[project.Hostname]
-		host.Echo.GET(fmt.Sprintf("%s/*", project.PrefixPath), controller.GetMedia(ctx, &project))
+		storageInstance, err := storage.CreateStorage(ctx, project.Storage)
+		if err != nil {
+			return hosts, fmt.Errorf("project=%s, failed to create storage instance: %v", project.ID, err)
+		}
+		host.Echo.GET(fmt.Sprintf("%s/*", project.PrefixPath), controller.GetMedia(ctx, &project, storageInstance))
 		host.Echo.GET(fmt.Sprintf("%s/webhook", project.PrefixPath), controller.GetWebhook(ctx, &project))
 
 	}
-	return hosts
+	return hosts, nil
 }

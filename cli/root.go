@@ -1,14 +1,11 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
-	"github.com/go-playground/validator/v10"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/parser"
 	"github.com/reflet-devops/go-media-resizer/types"
-	validatorMediaResize "github.com/reflet-devops/go-media-resizer/validator"
 	"reflect"
 	"regexp"
 	"slices"
@@ -56,22 +53,14 @@ func GetRootPreRunEFn(ctx *context.Context, validateCfg bool) func(*cobra.Comman
 		var err error
 		initConfig(ctx, cmd)
 
-		if validateCfg {
-			validate := validatorMediaResize.New(ctx)
-			err = validate.Struct(ctx.Config)
-			if err != nil {
-
-				var validationErrors validator.ValidationErrors
-				switch {
-				case errors.As(err, &validationErrors):
-					for _, validationError := range validationErrors {
-						ctx.Logger.Error(fmt.Sprintf("%v", validationError))
-					}
-					return errors.New("configuration file is not valid")
-				default:
-					return err
-				}
+		for i, project := range ctx.Config.Projects {
+			if len(project.Endpoints) == 0 {
+				ctx.Config.Projects[i].Endpoints = []config.Endpoint{{}}
 			}
+		}
+
+		if errValidate := validateConfig(ctx); validateCfg && errValidate != nil {
+			return errValidate
 		}
 
 		logLevelFlagStr, _ := cmd.Flags().GetString(LogLevel)
@@ -149,7 +138,7 @@ func prepareProject(ctx *context.Context) error {
 		for j, endpoint := range project.Endpoints {
 
 			if endpoint.DefaultResizeOpts.Format == "" {
-				project.Endpoints[j].DefaultResizeOpts.Format = types.TypeFormatAuto
+				endpoint.DefaultResizeOpts.Format = types.TypeFormatAuto
 			}
 
 			if endpoint.Regex != "" {
@@ -164,12 +153,13 @@ func prepareProject(ctx *context.Context) error {
 						return fmt.Errorf("project=%s, missing mandatory group name: %s", project.ID, name)
 					}
 				}
-				project.Endpoints[j].CompiledRegex = re
+				endpoint.CompiledRegex = re
 
 				if errTestRegex := validRegexTest(project, endpoint); errTestRegex != nil {
 					return fmt.Errorf("project=%s, regex test isn't valid %s: %v", project.ID, endpoint.Regex, errTestRegex)
 				}
 			}
+			project.Endpoints[j] = endpoint
 		}
 		project.PrefixPath = strings.TrimRight(project.PrefixPath, "/")
 		cfg.Projects[i] = project
@@ -193,7 +183,7 @@ func validRegexTest(project config.Project, endpoint config.Endpoint) error {
 		}
 
 		if !reflect.DeepEqual(opts, &test.ResultOpts) {
-			return fmt.Errorf("fail to validate RegexTest %s excepted: %v, actual: %v", test.Path, test.ResultOpts, opts)
+			return fmt.Errorf("fail to validate RegexTest %s excepted: %v, actual: %v", test.Path, &test.ResultOpts, opts)
 		}
 	}
 

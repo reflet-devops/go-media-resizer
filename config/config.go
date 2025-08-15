@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const DefaultRequestTimeout = 10 * time.Second
+const DefaultRequestTimeout = 2 * time.Second
 
 type Config struct {
 	HTTP HTTPConfig `mapstructure:"http" validate:"required"`
@@ -77,6 +77,7 @@ func DefaultConfig() *Config {
 			DefaultResizeOpts: types.ResizeOption{Format: types.TypeFormatAuto},
 		},
 		AcceptTypeFiles: []string{
+			types.TypeText,
 			types.TypeGIF,
 			types.TypeMP4,
 			types.TypeMEPG,
