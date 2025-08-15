@@ -19,7 +19,10 @@ func GetStartCmd(ctx *context.Context) *cobra.Command {
 
 func GetStartRunFn(ctx *context.Context) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
-		e := http.CreateServerHTTP(ctx)
+		e, err := http.CreateServerHTTP(ctx)
+		if err != nil {
+			return err
+		}
 
 		httpConfig := ctx.Config.HTTP
 

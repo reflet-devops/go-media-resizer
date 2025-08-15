@@ -69,6 +69,8 @@ func TestDomainAcceptedBySource_Handler(t *testing.T) {
 	ctx := context.TestContext(nil)
 	domainAcceptedBySource := NewDomainAcceptedBySource(ctx)
 	e := echo.New()
+	e.HideBanner = true
+	e.HidePort = true
 
 	tests := []struct {
 		name              string

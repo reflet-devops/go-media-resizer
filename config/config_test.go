@@ -12,9 +12,12 @@ func TestDefaultConfig(t *testing.T) {
 		&Config{HTTP: HTTPConfig{
 			Listen: "127.0.0.1:8080"},
 			ResizeCGI: ResizeCGIConfig{
+				Enabled:           true,
+				AllowSelfDomain:   true,
 				DefaultResizeOpts: types.ResizeOption{Format: types.TypeFormatAuto},
 			},
 			AcceptTypeFiles: []string{
+				types.TypeText,
 				types.TypeGIF,
 				types.TypeMP4,
 				types.TypeMEPG,

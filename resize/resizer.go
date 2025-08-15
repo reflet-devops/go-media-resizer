@@ -20,7 +20,6 @@ func Resize(file io.Reader, opts *types.ResizeOption) (io.Reader, error) {
 	if !opts.NeedResize() {
 		return file, nil
 	}
-
 	w := &bytes.Buffer{}
 
 	format, errFindFormat := imaging.FormatFromExtension(opts.OriginFormat)
@@ -42,7 +41,13 @@ func Resize(file io.Reader, opts *types.ResizeOption) (io.Reader, error) {
 		imgResize = imaging.Resize(img, opts.Width, opts.Height, imaging.Lanczos)
 	}
 
-	errEncode := imaging.Encode(w, imgResize, format)
+	var errEncode error
+	if opts.OriginFormat == types.TypeJPEG && opts.Quality != 0 {
+		optsEncode := imaging.JPEGQuality(opts.Quality)
+		errEncode = imaging.Encode(w, imgResize, format, optsEncode)
+	} else {
+		errEncode = imaging.Encode(w, imgResize, format)
+	}
 
 	return w, errEncode
 }

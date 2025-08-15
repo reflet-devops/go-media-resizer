@@ -51,7 +51,7 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 			return c.JSON(buildinHttp.StatusInternalServerError, err.Error())
 		}
 		buffer := bytes.NewBuffer(resource)
-		return SendStream(c, opts, buffer)
+		return SendStream(ctx, c, opts, buffer)
 	}
 }
 

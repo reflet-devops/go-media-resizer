@@ -23,6 +23,8 @@ func Test_GetMediaCGI_AcceptedType_Fail(t *testing.T) {
 
 	ctx := context.TestContext(nil)
 	e := echo.New()
+	e.HideBanner = true
+	e.HidePort = true
 
 	ctx.Config.AcceptTypeFiles = acceptedFileTypes
 
@@ -47,6 +49,8 @@ func Test_GetMediaCGI_Success(t *testing.T) {
 	ctx.Config.AcceptTypeFiles = []string{types.TypePNG}
 
 	e := echo.New()
+	e.HideBanner = true
+	e.HidePort = true
 
 	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/images.png", nil)
 	req.Host = "127.0.0.1"
@@ -82,6 +86,8 @@ func Test_GetMediaCGI_Decode_Error(t *testing.T) {
 	ctx := context.TestContext(nil)
 	ctx.Config.AcceptTypeFiles = []string{types.TypePNG}
 	e := echo.New()
+	e.HideBanner = true
+	e.HidePort = true
 
 	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/images.png", nil)
 	req.Host = "127.0.0.1"
@@ -107,6 +113,8 @@ func Test_GetMediaCGI_fetchCGIResource_Fail(t *testing.T) {
 	ctx.Config.AcceptTypeFiles = []string{types.TypePNG}
 
 	e := echo.New()
+	e.HideBanner = true
+	e.HidePort = true
 
 	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/images.png", nil)
 	req.Host = "127.0.0.1"

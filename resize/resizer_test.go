@@ -36,6 +36,12 @@ func TestResize(t *testing.T) {
 			wantErr: assert.NoError,
 		},
 		{
+			name:    "successWithJpegResizeAndQuality",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Source: "/fixtures/paysage.jpg", Height: 100, Width: 100, Quality: 80},
+			want:    "3ba2d01519093ce3ce501d9924d051bbd95b681d94209bc50ccbbb97a4955444",
+			wantErr: assert.NoError,
+		},
+		{
 			name:    "successWithJpegFitCrop",
 			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: TypeFitCrop, Source: "/fixtures/paysage.jpg", Height: 100, Width: 100},
 			want:    "5e932cfd7e6451d2289ce0d9cab7384cf07d80ca4b5b96e677f8a0cd9e19c7f8",
