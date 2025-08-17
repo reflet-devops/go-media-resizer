@@ -85,3 +85,85 @@ func Test_GetExtension(t *testing.T) {
 		})
 	}
 }
+
+func TestJoinUri(t *testing.T) {
+	tests := []struct {
+		name string
+		elem []string
+		want string
+	}{
+		{
+			name: "successWithEmpty",
+			elem: []string{},
+			want: "",
+		},
+		{
+			name: "successWithEmptyFirstElement",
+			elem: []string{"", "foo", "bar"},
+			want: "foo/bar",
+		},
+		{
+			name: "successWithFirstElement",
+			elem: []string{"foo", "foo", "bar"},
+			want: "foo/foo/bar",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, JoinUri(tt.elem...), "JoinUri(%v)", tt.elem)
+		})
+	}
+}
+
+func TestRemoveProtocol(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want string
+	}{
+		{
+			name: "successWithHttp",
+			url:  "http://hostname",
+			want: "hostname",
+		},
+		{
+			name: "successWithHttps",
+			url:  "https://hostname",
+			want: "hostname",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, RemoveProtocol(tt.url), "RemoveProtocol(%v)", tt.url)
+		})
+	}
+}
+
+func TestGetUri(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want string
+	}{
+		{
+			name: "successWithNotUri",
+			url:  "http://hostname",
+			want: "",
+		},
+		{
+			name: "successWithUri",
+			url:  "http://hostname/test",
+			want: "test",
+		},
+		{
+			name: "successWithUriMultiple",
+			url:  "http://hostname/test/test",
+			want: "test/test",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, GetUri(tt.url), "GetUri(%v)", tt.url)
+		})
+	}
+}

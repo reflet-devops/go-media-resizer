@@ -2,10 +2,12 @@ package storage
 
 import (
 	builtinCtx "context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/jonboulle/clockwork"
 	libMinio "github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/notification"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
 	mockTypes "github.com/reflet-devops/go-media-resizer/mocks/types"
@@ -21,9 +23,35 @@ func Test_minio_Type(t *testing.T) {
 	assert.Equal(t, MinioKey, storage.Type())
 }
 
-func Test_minio_GetPrefix(t *testing.T) {
-	storage := &minio{cfg: ConfigMinio{PrefixPath: "/app"}}
-	assert.Equal(t, "/app", storage.GetPrefix())
+func Test_minio_getFullPath(t *testing.T) {
+
+	tests := []struct {
+		name string
+		path string
+		cfg  ConfigMinio
+		want string
+	}{
+		{
+			name: "successWithoutPrefix",
+			path: "test/test.txt",
+			cfg:  ConfigMinio{PrefixPath: ""},
+			want: "test/test.txt",
+		},
+		{
+			name: "successWithPrefix",
+			path: "test/test.txt",
+			cfg:  ConfigMinio{PrefixPath: "app/public"},
+			want: "app/public/test/test.txt",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &minio{
+				cfg: tt.cfg,
+			}
+			assert.Equalf(t, tt.want, m.getFullPath(tt.path), "getFullPath(%v)", tt.path)
+		})
+	}
 }
 
 func Test_minio_getClient(t *testing.T) {
@@ -58,9 +86,18 @@ func Test_minio_GetFile(t *testing.T) {
 		{
 			name: "Success",
 			path: "foo/bar.txt",
-			cfg:  ConfigMinio{PrefixPath: "/app", ConfigClientMinio: ConfigClientMinio{BucketName: "bucket"}},
+			cfg:  ConfigMinio{PrefixPath: "", ConfigClientMinio: ConfigClientMinio{BucketName: "bucket"}},
 			mockFn: func(minioMock *mockTypes.MockMinioClient) {
-				minioMock.EXPECT().GetObject(gomock.Any(), gomock.Eq("bucket"), gomock.Eq("/app/foo/bar.txt"), gomock.Any()).Times(1).Return(nil, nil)
+				minioMock.EXPECT().GetObject(gomock.Any(), gomock.Eq("bucket"), gomock.Eq("foo/bar.txt"), gomock.Any()).Times(1).Return(nil, nil)
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "SuccessWithPrefix",
+			path: "foo/bar.txt",
+			cfg:  ConfigMinio{PrefixPath: "app", ConfigClientMinio: ConfigClientMinio{BucketName: "bucket"}},
+			mockFn: func(minioMock *mockTypes.MockMinioClient) {
+				minioMock.EXPECT().GetObject(gomock.Any(), gomock.Eq("bucket"), gomock.Eq("app/foo/bar.txt"), gomock.Any()).Times(1).Return(nil, nil)
 			},
 			wantErr: assert.NoError,
 		},
@@ -402,4 +439,104 @@ func Test_minio_startFallback(t *testing.T) {
 
 		})
 	}
+}
+
+func Test_minio_NotifyFileChange(t *testing.T) {
+	ctx := context.TestContext(nil)
+
+	tests := []struct {
+		name        string
+		cfg         ConfigMinio
+		minioInfoFn func() notification.Info
+		wantPrefix  string
+		want        types.Events
+	}{
+		{
+			name: "Success",
+			cfg:  ConfigMinio{ConfigClientMinio: ConfigClientMinio{BucketName: "test"}, PrefixPath: ""},
+			minioInfoFn: func() notification.Info {
+				info := notification.Info{}
+				err := json.Unmarshal([]byte(generateMinioInfoJson("text.txt")), &info)
+				assert.NoError(t, err)
+				return info
+			},
+			wantPrefix: "*",
+			want: types.Events{
+				{Type: types.EventTypePurge, Path: "text.txt"},
+			},
+		},
+		{
+			name: "SuccessWithPrefixPath",
+			cfg:  ConfigMinio{ConfigClientMinio: ConfigClientMinio{BucketName: "test"}, PrefixPath: "test/public"},
+			minioInfoFn: func() notification.Info {
+				info := notification.Info{}
+				err := json.Unmarshal([]byte(generateMinioInfoJson("text.txt")), &info)
+				assert.NoError(t, err)
+				return info
+			},
+			wantPrefix: "test/public/*",
+			want: types.Events{
+				{Type: types.EventTypePurge, Path: "text.txt"},
+			},
+		},
+		{
+			name: "SuccessWithError",
+			cfg:  ConfigMinio{ConfigClientMinio: ConfigClientMinio{BucketName: "test"}, PrefixPath: "test/public"},
+			minioInfoFn: func() notification.Info {
+				return notification.Info{Err: errors.New("test error")}
+			},
+			wantPrefix: "test/public/*",
+			want:       nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			minioChan := make(chan notification.Info)
+			chanEvents := make(chan types.Events, 1)
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			primaryMinioMock := mockTypes.NewMockMinioClient(ctrl)
+			primaryMinioMock.EXPECT().ListenBucketNotification(
+				gomock.Any(),
+				gomock.Eq("test"),
+				gomock.Eq(tt.wantPrefix),
+				gomock.Any(),
+				gomock.Any(),
+			).Times(1).Return(minioChan)
+
+			m := &minio{
+				primaryClient: primaryMinioMock,
+				cfg:           tt.cfg,
+				ctx:           ctx,
+			}
+			go m.NotifyFileChange(chanEvents)
+			time.Sleep(100 * time.Millisecond)
+			minioChan <- tt.minioInfoFn()
+
+			if tt.want != nil {
+				events := <-chanEvents
+				assert.Equal(t, tt.want, events)
+			}
+			ctx.Cancel()
+		})
+	}
+}
+
+func generateMinioInfoJson(path string) string {
+	return `
+{
+    "records": [
+        {
+            "EventVersion": "1",
+            "EventName": "update",
+            "s3": {
+                "Object": {
+                    "key": "` + path + `"
+                }
+            }
+        }
+    ],
+    "err": null
+}
+`
 }

@@ -32,6 +32,7 @@ func GetStartRunFn(ctx *context.Context) func(*cobra.Command, []string) error {
 				case sig := <-ctx.Signal():
 					ctx.Logger.Info(fmt.Sprintf("%s signal received, exiting...", sig.String()))
 					_ = e.Shutdown(stdContext.Background())
+					ctx.Done()
 				}
 			}
 		}()

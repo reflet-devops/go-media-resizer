@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/context"
@@ -44,7 +43,7 @@ func DetectFormatFromHeaderAccept(acceptHeaderValue string, opts *types.ResizeOp
 }
 
 func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, content io.Reader) error {
-	vary := []string{echo.HeaderAcceptEncoding}
+	vary := []string{echo.HeaderAccept}
 	DetectFormatFromHeaderAccept(c.Request().Header.Get(echo.HeaderAccept), opts)
 	if opts.NeedResize() {
 		var err error
@@ -69,12 +68,15 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 		ctx.Logger.Error(fmt.Sprintf("failed to read data %s: %v", opts.Source, err))
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to read data %s", opts.Source))
 	}
-	contentHash, _ := hash.GenerateMD5(bytes.NewReader(data))
-
+	contentHash, _ := hash.GenerateMD5FromString(string(data))
+	
 	c.Response().Header().Add(echo.HeaderContentLength, strconv.Itoa(len(data)))
 	c.Response().Header().Add("Date", time.Now().In(TimeLocationGMT).Format(time.RFC1123))
 	c.Response().Header().Add("ETag", contentHash)
 	c.Response().Header().Add(echo.HeaderVary, strings.Join(vary, ", "))
+	if opts.HasTags() {
+		c.Response().Header().Add("X-Cache-Tags", opts.TagsString())
+	}
 
 	return c.Blob(http.StatusOK, types.GetMimeType(opts.Format), data)
 }

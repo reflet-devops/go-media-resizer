@@ -16,7 +16,7 @@ import (
 func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 	return func(c echo.Context) error {
 		source := c.Param("source")
-		opts := &types.ResizeOption{}
+		opts := &types.ResizeOption{Source: source}
 
 		fileExtension := urltools.GetExtension(source)
 		fileType := types.GetType(fileExtension)
@@ -51,6 +51,9 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 			return c.JSON(buildinHttp.StatusInternalServerError, err.Error())
 		}
 		buffer := bytes.NewBuffer(resource)
+
+		opts.AddTag(types.GetTagSourcePathHash(urltools.GetUri(opts.Source)))
+
 		return SendStream(ctx, c, opts, buffer)
 	}
 }

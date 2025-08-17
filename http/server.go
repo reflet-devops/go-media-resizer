@@ -3,6 +3,7 @@ package http
 import (
 	"fmt"
 	"github.com/labstack/echo/v4"
+	"github.com/reflet-devops/go-media-resizer/cache_purge"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/http/controller"
@@ -10,6 +11,7 @@ import (
 	"github.com/reflet-devops/go-media-resizer/http/middleware"
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"github.com/reflet-devops/go-media-resizer/storage"
+	"github.com/reflet-devops/go-media-resizer/types"
 )
 
 type Host struct {
@@ -92,6 +94,36 @@ func initRouter(ctx *context.Context, cfg *config.Config) (map[string]*Host, err
 		host.Echo.GET(fmt.Sprintf("%s/*", project.PrefixPath), controller.GetMedia(ctx, &project, storageInstance))
 		host.Echo.GET(fmt.Sprintf("%s/webhook", project.PrefixPath), controller.GetWebhook(ctx, &project))
 
+		if len(project.PurgeCaches) > 0 {
+			purgeCaches := []types.PurgeCache{}
+			for _, purgeCacheCfg := range project.PurgeCaches {
+				purgeCache, errCreatePurge := cache_purge.CreatePurgeCache(ctx, &project, purgeCacheCfg)
+				if errCreatePurge != nil {
+					return hosts, errCreatePurge
+				}
+				purgeCaches = append(purgeCaches, purgeCache)
+			}
+			listenFileChange(ctx, purgeCaches, storageInstance)
+		}
+
 	}
 	return hosts, nil
+}
+
+func listenFileChange(ctx *context.Context, purgeCaches []types.PurgeCache, storageInstance types.Storage) {
+	chanEvents := make(chan types.Events, 2024)
+
+	go func(chanEvents chan types.Events, purgeCaches []types.PurgeCache) {
+		for {
+			select {
+			case event := <-chanEvents:
+				for _, purgeCache := range purgeCaches {
+					purgeCache.Purge(event)
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}(chanEvents, purgeCaches)
+	go storageInstance.NotifyFileChange(chanEvents)
 }

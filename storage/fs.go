@@ -35,9 +35,7 @@ func (f fs) Type() string {
 	return FsKey
 }
 
-func (f fs) GetPrefix() string {
-	return f.cfg.PrefixPath
-}
+func (f fs) NotifyFileChange(_ chan types.Events) {}
 
 func (f fs) GetFile(path string) (io.Reader, error) {
 	return f.fs.Open(filepath.Join(f.cfg.PrefixPath, path))
