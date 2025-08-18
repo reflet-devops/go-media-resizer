@@ -13,6 +13,7 @@ import (
 	"github.com/reflet-devops/go-media-resizer/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -69,7 +70,22 @@ func (m *minio) getFullPath(path string) string {
 }
 
 func (m *minio) GetFile(path string) (io.Reader, error) {
-	return m.getClient().GetObject(builtinCtx.Background(), m.cfg.BucketName, filepath.Join(m.cfg.PrefixPath, path), libMinio.GetObjectOptions{})
+	object, err := m.getClient().GetObject(builtinCtx.Background(), m.cfg.BucketName, filepath.Join(m.cfg.PrefixPath, path), libMinio.GetObjectOptions{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	stat, errStat := object.Stat()
+	if errStat != nil {
+		return nil, errStat
+	}
+
+	if stat.Size == 0 {
+		return nil, os.ErrNotExist
+	}
+
+	return object, err
 }
 
 func (m *minio) getClient() types.MinioClient {

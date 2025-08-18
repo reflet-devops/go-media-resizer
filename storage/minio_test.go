@@ -14,8 +14,11 @@ import (
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+	"reflect"
+	"sync"
 	"testing"
 	"time"
+	"unsafe"
 )
 
 func Test_minio_Type(t *testing.T) {
@@ -74,6 +77,35 @@ func Test_minio_createMinioClient(t *testing.T) {
 	assert.IsType(t, &libMinio.Client{}, minioClient)
 }
 
+func getMinioObject(objectInfo libMinio.ObjectInfo, err error) *libMinio.Object {
+	object := &libMinio.Object{}
+	v := reflect.ValueOf(object).Elem()
+
+	field := v.FieldByName("mutex")
+	field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
+	field.Set(reflect.ValueOf(&sync.Mutex{}))
+
+	field = v.FieldByName("objectInfo")
+	field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
+	field.Set(reflect.ValueOf(objectInfo))
+
+	field = v.FieldByName("isStarted")
+	field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
+	field.Set(reflect.ValueOf(true))
+
+	field = v.FieldByName("objectInfoSet")
+	field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
+	field.Set(reflect.ValueOf(true))
+
+	if err != nil {
+		field = v.FieldByName("prevErr")
+		field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
+		field.Set(reflect.ValueOf(err))
+	}
+
+	return object
+}
+
 func Test_minio_GetFile(t *testing.T) {
 	ctx := context.TestContext(nil)
 	tests := []struct {
@@ -88,7 +120,8 @@ func Test_minio_GetFile(t *testing.T) {
 			path: "foo/bar.txt",
 			cfg:  ConfigMinio{PrefixPath: "", ConfigClientMinio: ConfigClientMinio{BucketName: "bucket"}},
 			mockFn: func(minioMock *mockTypes.MockMinioClient) {
-				minioMock.EXPECT().GetObject(gomock.Any(), gomock.Eq("bucket"), gomock.Eq("foo/bar.txt"), gomock.Any()).Times(1).Return(nil, nil)
+				object := getMinioObject(libMinio.ObjectInfo{Size: 1}, nil)
+				minioMock.EXPECT().GetObject(gomock.Any(), gomock.Eq("bucket"), gomock.Eq("foo/bar.txt"), gomock.Any()).Times(1).Return(object, nil)
 			},
 			wantErr: assert.NoError,
 		},
@@ -97,7 +130,8 @@ func Test_minio_GetFile(t *testing.T) {
 			path: "foo/bar.txt",
 			cfg:  ConfigMinio{PrefixPath: "app", ConfigClientMinio: ConfigClientMinio{BucketName: "bucket"}},
 			mockFn: func(minioMock *mockTypes.MockMinioClient) {
-				minioMock.EXPECT().GetObject(gomock.Any(), gomock.Eq("bucket"), gomock.Eq("app/foo/bar.txt"), gomock.Any()).Times(1).Return(nil, nil)
+				object := getMinioObject(libMinio.ObjectInfo{Size: 1}, nil)
+				minioMock.EXPECT().GetObject(gomock.Any(), gomock.Eq("bucket"), gomock.Eq("app/foo/bar.txt"), gomock.Any()).Times(1).Return(object, nil)
 			},
 			wantErr: assert.NoError,
 		},
@@ -106,7 +140,8 @@ func Test_minio_GetFile(t *testing.T) {
 			path: "/foo/bar.txt",
 			cfg:  ConfigMinio{PrefixPath: "/app", ConfigClientMinio: ConfigClientMinio{BucketName: "bucket"}},
 			mockFn: func(minioMock *mockTypes.MockMinioClient) {
-				minioMock.EXPECT().GetObject(gomock.Any(), gomock.Eq("bucket"), gomock.Eq("/app/foo/bar.txt"), gomock.Any()).Times(1).Return(nil, nil)
+				object := getMinioObject(libMinio.ObjectInfo{Size: 1}, nil)
+				minioMock.EXPECT().GetObject(gomock.Any(), gomock.Eq("bucket"), gomock.Eq("/app/foo/bar.txt"), gomock.Any()).Times(1).Return(object, nil)
 			},
 			wantErr: assert.NoError,
 		},
@@ -116,6 +151,26 @@ func Test_minio_GetFile(t *testing.T) {
 			cfg:  ConfigMinio{PrefixPath: "/app", ConfigClientMinio: ConfigClientMinio{BucketName: "bucket"}},
 			mockFn: func(minioMock *mockTypes.MockMinioClient) {
 				minioMock.EXPECT().GetObject(gomock.Any(), gomock.Eq("bucket"), gomock.Eq("/app/foo/bar.txt"), gomock.Any()).Times(1).Return(nil, errors.New("GetObject failed"))
+			},
+			wantErr: assert.Error,
+		},
+		{
+			name: "FailGetObjectStat",
+			path: "foo/bar.txt",
+			cfg:  ConfigMinio{PrefixPath: "/app", ConfigClientMinio: ConfigClientMinio{BucketName: "bucket"}},
+			mockFn: func(minioMock *mockTypes.MockMinioClient) {
+				object := getMinioObject(libMinio.ObjectInfo{Size: 1}, errors.New("GetObject failed"))
+				minioMock.EXPECT().GetObject(gomock.Any(), gomock.Eq("bucket"), gomock.Eq("/app/foo/bar.txt"), gomock.Any()).Times(1).Return(object, nil)
+			},
+			wantErr: assert.Error,
+		},
+		{
+			name: "FailObjectSizeEq0",
+			path: "foo/bar.txt",
+			cfg:  ConfigMinio{PrefixPath: "/app", ConfigClientMinio: ConfigClientMinio{BucketName: "bucket"}},
+			mockFn: func(minioMock *mockTypes.MockMinioClient) {
+				object := getMinioObject(libMinio.ObjectInfo{Size: 0}, nil)
+				minioMock.EXPECT().GetObject(gomock.Any(), gomock.Eq("bucket"), gomock.Eq("/app/foo/bar.txt"), gomock.Any()).Times(1).Return(object, nil)
 			},
 			wantErr: assert.Error,
 		},
