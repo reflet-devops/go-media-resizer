@@ -1,0 +1,85 @@
+package transform
+
+import (
+	"bytes"
+	"fmt"
+	"github.com/Kagami/go-avif"
+	"github.com/disintegration/imaging"
+	"github.com/kolesa-team/go-webp/webp"
+	"github.com/reflet-devops/go-media-resizer/types"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
+	"io"
+	"slices"
+)
+
+const (
+	TypeFitCrop = "crop"
+)
+
+func Transform(file io.Reader, opts *types.ResizeOption) (io.Reader, error) {
+	if !opts.NeedResize() && !opts.NeedFormat() {
+		return file, nil
+	}
+
+	img, _, errDecode := image.Decode(file)
+	if errDecode != nil {
+		return nil, fmt.Errorf("failed to decode image %s: %w", opts.Source, errDecode)
+	}
+
+	if opts.NeedResize() {
+		img = Resize(img, opts)
+	}
+
+	imgFormated, errFormat := Format(img, opts)
+	if errFormat != nil {
+		return nil, fmt.Errorf("failed to format image %s: %w", opts.Source, errFormat)
+	}
+
+	return imgFormated, nil
+}
+
+func Resize(img image.Image, opts *types.ResizeOption) image.Image {
+	var imgResize *image.NRGBA
+
+	switch opts.Fit {
+	case TypeFitCrop:
+		imgResize = imaging.CropCenter(img, opts.Width, opts.Height)
+	default:
+		imgResize = imaging.Resize(img, opts.Width, opts.Height, imaging.Lanczos)
+	}
+
+	return imgResize
+}
+
+func Format(img image.Image, opts *types.ResizeOption) (io.Reader, error) {
+	var errFormat error
+	w := &bytes.Buffer{}
+
+	if slices.Contains([]string{types.TypeAVIF, types.TypeWEBP}, opts.Format) {
+		if opts.Format == types.TypeAVIF {
+			errFormat = avif.Encode(w, img, &avif.Options{Speed: 8, Quality: 60})
+		} else if opts.Format == types.TypeWEBP {
+			errFormat = webp.Encode(w, img, nil)
+		}
+
+	} else if slices.Contains([]string{types.TypeJPEG, types.TypePNG}, opts.Format) {
+		format, errFindFormat := imaging.FormatFromExtension(opts.OriginFormat)
+		if errFindFormat != nil {
+			return nil, fmt.Errorf("failed to find format from %s: %w", opts.Source, errFindFormat)
+		}
+
+		if opts.OriginFormat == types.TypeJPEG && opts.Quality != 0 {
+			optsEncode := imaging.JPEGQuality(opts.Quality)
+			errFormat = imaging.Encode(w, img, format, optsEncode)
+		} else {
+			errFormat = imaging.Encode(w, img, format)
+		}
+	} else {
+		return nil, fmt.Errorf("unsupported format: %s", opts.Format)
+	}
+
+	return w, errFormat
+}

@@ -33,3 +33,11 @@ func (r *ResizeOption) TagsString() string {
 func (r *ResizeOption) NeedResize() bool {
 	return r.Width > 0 || r.Height > 0
 }
+
+func (r *ResizeOption) NeedFormat() bool {
+	return r.OriginFormat != r.Format
+}
+
+func (r *ResizeOption) NeedTransform() bool {
+	return r.NeedResize() || r.NeedFormat()
+}
