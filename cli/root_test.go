@@ -98,7 +98,7 @@ func Test_prepareProject_Success(t *testing.T) {
 		HTTP:            config.HTTPConfig{},
 		AcceptTypeFiles: []string{".1"},
 		ResizeTypeFiles: []string{".3"},
-		Headers: map[string]string{
+		Headers: types.Headers{
 			"X-Custom": "foo",
 		},
 		ResizeCGI: config.ResizeCGIConfig{},
@@ -110,7 +110,7 @@ func Test_prepareProject_Success(t *testing.T) {
 				Endpoints: []config.Endpoint{
 					{Regex: regexStr},
 				},
-				Headers: map[string]string{
+				Headers: types.Headers{
 					"X-Custom": "bar",
 				},
 			},
@@ -121,7 +121,7 @@ func Test_prepareProject_Success(t *testing.T) {
 			{
 				ID:                   "extra-headers",
 				ExtraAcceptTypeFiles: []string{".2", ".3"},
-				ExtraHeaders: map[string]string{
+				ExtraHeaders: types.Headers{
 					"X-Extra": "foo",
 				},
 			},
@@ -148,7 +148,7 @@ func Test_prepareProject_Success(t *testing.T) {
 			Endpoints: []config.Endpoint{
 				{Regex: regexStr, DefaultResizeOpts: types.ResizeOption{Format: types.TypeFormatAuto}, CompiledRegex: re},
 			},
-			Headers: map[string]string{
+			Headers: types.Headers{
 				"X-Custom": "bar",
 			},
 		},
@@ -156,7 +156,7 @@ func Test_prepareProject_Success(t *testing.T) {
 			ID:                   "concat",
 			AcceptTypeFiles:      []string{".1", ".2", ".3"},
 			ExtraAcceptTypeFiles: []string{".2", ".3"},
-			Headers: map[string]string{
+			Headers: types.Headers{
 				"X-Custom": "foo",
 			},
 		},
@@ -164,11 +164,11 @@ func Test_prepareProject_Success(t *testing.T) {
 			ID:                   "extra-headers",
 			AcceptTypeFiles:      []string{".1", ".2", ".3"},
 			ExtraAcceptTypeFiles: []string{".2", ".3"},
-			Headers: map[string]string{
+			Headers: types.Headers{
 				"X-Custom": "foo",
 				"X-Extra":  "foo",
 			},
-			ExtraHeaders: map[string]string{
+			ExtraHeaders: types.Headers{
 				"X-Extra": "foo",
 			},
 		},
@@ -186,7 +186,7 @@ func Test_prepareProject_Success(t *testing.T) {
 					},
 				},
 			},
-			Headers: map[string]string{
+			Headers: types.Headers{
 				"X-Custom": "foo",
 			},
 		},

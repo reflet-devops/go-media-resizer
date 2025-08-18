@@ -78,5 +78,9 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 		c.Response().Header().Add("Cache-Tag", opts.TagsString())
 	}
 
+	for k, v := range opts.Headers {
+		c.Response().Header().Add(k, v)
+	}
+
 	return c.Blob(http.StatusOK, types.GetMimeType(opts.Format), data)
 }

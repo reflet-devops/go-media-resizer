@@ -135,22 +135,6 @@ func prepareProject(ctx *context.Context) error {
 		slices.Sort(project.AcceptTypeFiles)
 		project.AcceptTypeFiles = slices.Compact(project.AcceptTypeFiles) // remove consecutive identical value
 
-		if project.Headers == nil {
-			project.Headers = config.Headers{}
-		}
-
-		// merge headers
-		for k, v := range ctx.Config.Headers {
-			_, ok := project.Headers[k]
-			if !ok {
-				project.Headers[k] = v
-			}
-		}
-		// add extra headers
-		for k, v := range project.ExtraHeaders {
-			project.Headers[k] = v
-		}
-
 		for j, endpoint := range project.Endpoints {
 
 			if endpoint.DefaultResizeOpts.Format == "" {
@@ -178,6 +162,22 @@ func prepareProject(ctx *context.Context) error {
 			project.Endpoints[j] = endpoint
 		}
 		project.PrefixPath = strings.TrimRight(project.PrefixPath, "/")
+
+		if project.Headers == nil {
+			project.Headers = types.Headers{}
+		}
+
+		for k, v := range ctx.Config.Headers {
+			_, ok := project.Headers[k]
+			if !ok {
+				project.Headers[k] = v
+			}
+		}
+
+		for k, v := range project.ExtraHeaders {
+			project.Headers[k] = v
+		}
+
 		cfg.Projects[i] = project
 	}
 	return nil

@@ -40,6 +40,9 @@ func Test_CreateServerHTTP_Success(t *testing.T) {
 func Test_CreateServerHTTP_CGI_Success(t *testing.T) {
 	ctx := context.TestContext(nil)
 	ctx.Config.ResizeCGI.Enabled = true
+	ctx.Config.Headers = types.Headers{"X-Custom": "foo", "X-Override": "foo"}
+	ctx.Config.ResizeCGI.ExtraHeaders = types.Headers{"X-Override": "bar"}
+
 	e, err := CreateServerHTTP(ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, e)
@@ -56,6 +59,9 @@ func Test_CreateServerHTTP_CGI_Success(t *testing.T) {
 	if len(mandatoryRoutes) > 0 {
 		assert.Fail(t, fmt.Sprintf("Missing mandatory CGI routes: %v", mandatoryRoutes))
 	}
+
+	wantHeader := types.Headers{"X-Custom": "foo", "X-Override": "bar"}
+	assert.Equal(t, wantHeader, ctx.Config.ResizeCGI.Headers)
 }
 
 func Test_CreateServerHTTP_HostNotFound_Fail(t *testing.T) {

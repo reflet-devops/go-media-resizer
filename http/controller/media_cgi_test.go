@@ -47,6 +47,7 @@ func Test_GetMediaCGI_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ctx.Config.AcceptTypeFiles = []string{types.TypePNG}
+	ctx.Config.Headers = types.Headers{"X-Custom": "foo"}
 
 	e := echo.New()
 	e.HideBanner = true
@@ -79,6 +80,8 @@ func Test_GetMediaCGI_Success(t *testing.T) {
 	header := rec.Result().Header
 	body := rec.Body.String()
 	assert.Equal(t, "image/png", header.Get("Content-Type"))
+	assert.Equal(t, "foo", header.Get("X-Custom"))
+
 	assert.Equal(t, body, "hello world")
 }
 

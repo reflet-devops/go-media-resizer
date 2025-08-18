@@ -16,7 +16,7 @@ import (
 func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 	return func(c echo.Context) error {
 		source := c.Param("source")
-		opts := &types.ResizeOption{Source: source}
+		opts := &types.ResizeOption{Source: source, Headers: types.Headers{}}
 
 		fileExtension := urltools.GetExtension(source)
 		fileType := types.GetType(fileExtension)
@@ -54,6 +54,9 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 
 		opts.AddTag(types.GetTagSourcePathHash(urltools.GetUri(opts.Source)))
 
+		for k, v := range ctx.Config.Headers {
+			opts.Headers[k] = v
+		}
 		return SendStream(ctx, c, opts, buffer)
 	}
 }

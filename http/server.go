@@ -37,6 +37,15 @@ func CreateServerHTTP(ctx *context.Context) (*echo.Echo, error) {
 	}
 	if ctx.Config.ResizeCGI.Enabled {
 		cgiMiddleware := middleware.NewDomainAcceptedBySource(ctx)
+
+		ctx.Config.ResizeCGI.Headers = types.Headers{}
+		for k, v := range ctx.Config.Headers {
+			ctx.Config.ResizeCGI.Headers[k] = v
+		}
+		for k, v := range ctx.Config.ResizeCGI.ExtraHeaders {
+			ctx.Config.ResizeCGI.Headers[k] = v
+		}
+
 		for _, route := range CgiExtraRoutes {
 			e.GET(route, controller.GetMediaCGI(ctx), cgiMiddleware.Handler)
 		}

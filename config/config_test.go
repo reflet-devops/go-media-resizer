@@ -29,7 +29,7 @@ func TestDefaultConfig(t *testing.T) {
 				types.TypePNG,
 				types.TypeJPEG,
 			},
-			Headers:        make(Headers),
+			Headers:        types.Headers{},
 			RequestTimeout: DefaultRequestTimeout,
 		},
 		got,

@@ -14,7 +14,7 @@ type Config struct {
 	AcceptTypeFiles []string        `mapstructure:"accept_type_files" validate:"required"`
 	ResizeTypeFiles []string        `mapstructure:"resize_type_files" validate:"required"`
 	ResizeCGI       ResizeCGIConfig `mapstructure:"resize_cgi"`
-	Headers         Headers         `mapstructure:"headers"`
+	Headers         types.Headers   `mapstructure:"headers"`
 	RequestTimeout  time.Duration   `mapstructure:"request_timeout"`
 	Projects        []Project       `mapstructure:"projects" validate:"unique-project-cfg,required,unique=ID,min=1,dive"`
 }
@@ -29,10 +29,10 @@ type Project struct {
 
 	Endpoints []Endpoint `mapstructure:"endpoints" validate:"required,min=1,dive"`
 
-	AcceptTypeFiles      []string `mapstructure:"accept_type_files"`
-	ExtraAcceptTypeFiles []string `mapstructure:"extra_accept_type_files"`
-	Headers              Headers  `mapstructure:"headers"`
-	ExtraHeaders         Headers  `mapstructure:"extra_headers"`
+	AcceptTypeFiles      []string      `mapstructure:"accept_type_files"`
+	ExtraAcceptTypeFiles []string      `mapstructure:"extra_accept_type_files"`
+	Headers              types.Headers `mapstructure:"headers"`
+	ExtraHeaders         types.Headers `mapstructure:"extra_headers"`
 }
 
 type Endpoint struct {
@@ -44,8 +44,6 @@ type Endpoint struct {
 	RegexTests []RegexTest `mapstructure:"regex_tests" validate:"dive"`
 }
 
-type Headers map[string]string
-
 type HTTPConfig struct {
 	Listen string `mapstructure:"listen" validate:"required"`
 }
@@ -55,6 +53,8 @@ type ResizeCGIConfig struct {
 	AllowDomains      []string           `mapstructure:"allow_domains"`
 	AllowSelfDomain   bool               `mapstructure:"allow_self_domain"`
 	DefaultResizeOpts types.ResizeOption `mapstructure:"default_resize"`
+	Headers           types.Headers
+	ExtraHeaders      types.Headers `mapstructure:"extra_headers"`
 }
 
 type StorageConfig struct {
@@ -93,7 +93,7 @@ func DefaultConfig() *Config {
 			types.TypePNG,
 			types.TypeJPEG,
 		},
-		Headers:        Headers{},
+		Headers:        types.Headers{},
 		RequestTimeout: DefaultRequestTimeout,
 	}
 }

@@ -23,17 +23,17 @@ func Test_ParseOption(t *testing.T) {
 		{
 			name:       "successWithNoRegex",
 			endpoint:   &config.Endpoint{},
-			projectCfg: &config.Project{AcceptTypeFiles: []string{types.TypePNG}},
+			projectCfg: &config.Project{AcceptTypeFiles: []string{types.TypePNG}, Headers: types.Headers{"X-Custom": "foo"}},
 			path:       "/media/image.png",
-			want:       &types.ResizeOption{OriginFormat: types.TypePNG, Source: "/media/image.png"},
+			want:       &types.ResizeOption{OriginFormat: types.TypePNG, Source: "/media/image.png", Headers: types.Headers{"X-Custom": "foo"}},
 			wantErr:    assert.NoError,
 		},
 		{
 			name:       "successWithRegex",
 			endpoint:   &config.Endpoint{Regex: "(?<source>.*)"},
-			projectCfg: &config.Project{AcceptTypeFiles: []string{types.TypePNG}},
+			projectCfg: &config.Project{AcceptTypeFiles: []string{types.TypePNG}, Headers: types.Headers{"X-Custom": "foo"}},
 			path:       "/media/image.png",
-			want:       &types.ResizeOption{OriginFormat: types.TypePNG, Source: "/media/image.png"},
+			want:       &types.ResizeOption{OriginFormat: types.TypePNG, Source: "/media/image.png", Headers: types.Headers{"X-Custom": "foo"}},
 			wantErr:    assert.NoError,
 		},
 		{
