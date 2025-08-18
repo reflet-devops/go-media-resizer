@@ -18,7 +18,7 @@ func ParseOption(endpoint *config.Endpoint, projectCfg *config.Project, path str
 	}
 
 	if endpoint.CompiledRegex == nil {
-		return &types.ResizeOption{Source: path, OriginFormat: originType}, nil
+		return &types.ResizeOption{Source: path, OriginFormat: originType, Headers: projectCfg.Headers}, nil
 	}
 
 	re := endpoint.CompiledRegex
@@ -40,6 +40,7 @@ func ParseOption(endpoint *config.Endpoint, projectCfg *config.Project, path str
 
 	opts := endpoint.DefaultResizeOpts
 	opts.OriginFormat = originType
+	opts.Headers = projectCfg.Headers
 
 	err := mapstructure.Decode(params, &opts)
 

@@ -114,7 +114,7 @@ func TestSendStream(t *testing.T) {
 	}{
 		{
 			name:         "successWithPlainText",
-			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypeText, Source: "/text.txt", Tags: []string{"tag1"}},
+			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypeText, Source: "/text.txt", Headers: types.Headers{"X-Custom": "foo"}, Tags: []string{"tag1"}},
 			headerAccept: "text/plain",
 			contentFn: func() io.Reader {
 				return bytes.NewReader([]byte("hello"))
@@ -122,13 +122,14 @@ func TestSendStream(t *testing.T) {
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusOK, rec.Code)
 				assert.Equal(t, types.MimeTypeText, rec.Header().Get(echo.HeaderContentType))
+				assert.Equal(t, "foo", rec.Header().Get("X-Custom"))
 				assert.Equal(t, []byte("hello"), rec.Body.Bytes())
 			},
 			wantErr: assert.NoError,
 		},
 		{
 			name:         "successWithResizeFormat",
-			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/paysage.png", Width: 500},
+			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/paysage.png", Headers: types.Headers{"X-Custom": "foo"}, Width: 500},
 			headerAccept: "image/avif,image/webp,image/png",
 			contentFn: func() io.Reader {
 				file, errOpen := os.Open("../../fixtures/paysage.png")
@@ -138,6 +139,7 @@ func TestSendStream(t *testing.T) {
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusOK, rec.Code)
 				assert.Equal(t, types.MimeTypeAVIF, rec.Header().Get(echo.HeaderContentType))
+				assert.Equal(t, "foo", rec.Header().Get("X-Custom"))
 				assert.NotEmpty(t, rec.Body.Bytes())
 			},
 			wantErr: assert.NoError,

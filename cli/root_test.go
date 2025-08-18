@@ -98,7 +98,10 @@ func Test_prepareProject_Success(t *testing.T) {
 		HTTP:            config.HTTPConfig{},
 		AcceptTypeFiles: []string{".1"},
 		ResizeTypeFiles: []string{".3"},
-		ResizeCGI:       config.ResizeCGIConfig{},
+		Headers: types.Headers{
+			"X-Custom": "foo",
+		},
+		ResizeCGI: config.ResizeCGIConfig{},
 		Projects: []config.Project{
 			{
 				ID:                   "overwrite",
@@ -107,10 +110,20 @@ func Test_prepareProject_Success(t *testing.T) {
 				Endpoints: []config.Endpoint{
 					{Regex: regexStr},
 				},
+				Headers: types.Headers{
+					"X-Custom": "bar",
+				},
 			},
 			{
 				ID:                   "concat",
 				ExtraAcceptTypeFiles: []string{".2", ".3"},
+			},
+			{
+				ID:                   "extra-headers",
+				ExtraAcceptTypeFiles: []string{".2", ".3"},
+				ExtraHeaders: types.Headers{
+					"X-Extra": "foo",
+				},
 			},
 			{
 				ID:                   "regex-test",
@@ -135,11 +148,29 @@ func Test_prepareProject_Success(t *testing.T) {
 			Endpoints: []config.Endpoint{
 				{Regex: regexStr, DefaultResizeOpts: types.ResizeOption{Format: types.TypeFormatAuto}, CompiledRegex: re},
 			},
+			Headers: types.Headers{
+				"X-Custom": "bar",
+			},
 		},
 		{
 			ID:                   "concat",
 			AcceptTypeFiles:      []string{".1", ".2", ".3"},
 			ExtraAcceptTypeFiles: []string{".2", ".3"},
+			Headers: types.Headers{
+				"X-Custom": "foo",
+			},
+		},
+		{
+			ID:                   "extra-headers",
+			AcceptTypeFiles:      []string{".1", ".2", ".3"},
+			ExtraAcceptTypeFiles: []string{".2", ".3"},
+			Headers: types.Headers{
+				"X-Custom": "foo",
+				"X-Extra":  "foo",
+			},
+			ExtraHeaders: types.Headers{
+				"X-Extra": "foo",
+			},
 		},
 		{
 			ID:                   "regex-test",
@@ -154,6 +185,9 @@ func Test_prepareProject_Success(t *testing.T) {
 						{Path: "/test.png", ResultOpts: types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/test.png"}},
 					},
 				},
+			},
+			Headers: types.Headers{
+				"X-Custom": "foo",
 			},
 		},
 	}

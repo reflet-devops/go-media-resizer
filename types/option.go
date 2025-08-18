@@ -4,6 +4,8 @@ import (
 	"strings"
 )
 
+type Headers map[string]string
+
 type ResizeOption struct {
 	OriginFormat string `mapstructure:"origin_format"`
 	Format       string `mapstructure:"format"`
@@ -12,8 +14,8 @@ type ResizeOption struct {
 	Quality      int    `mapstructure:"quality"`
 	Fit          string `mapstructure:"fit"`
 	Source       string `mapstructure:"source"`
-
-	Tags []string
+	Headers      Headers
+	Tags         []string
 }
 
 func (r *ResizeOption) HasTags() bool {
