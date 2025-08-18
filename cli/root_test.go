@@ -112,6 +112,18 @@ func Test_prepareProject_Success(t *testing.T) {
 				ID:                   "concat",
 				ExtraAcceptTypeFiles: []string{".2", ".3"},
 			},
+			{
+				ID:                   "regex-test",
+				ExtraAcceptTypeFiles: []string{types.TypePNG},
+				Endpoints: []config.Endpoint{
+					{
+						Regex: regexStr,
+						RegexTests: []config.RegexTest{
+							{Path: "/test.png", ResultOpts: types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/test.png"}},
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -129,11 +141,26 @@ func Test_prepareProject_Success(t *testing.T) {
 			AcceptTypeFiles:      []string{".1", ".2", ".3"},
 			ExtraAcceptTypeFiles: []string{".2", ".3"},
 		},
+		{
+			ID:                   "regex-test",
+			AcceptTypeFiles:      []string{".1", ".3", types.TypePNG},
+			ExtraAcceptTypeFiles: []string{types.TypePNG},
+			Endpoints: []config.Endpoint{
+				{
+					Regex:             regexStr,
+					CompiledRegex:     re,
+					DefaultResizeOpts: types.ResizeOption{Format: types.TypeFormatAuto},
+					RegexTests: []config.RegexTest{
+						{Path: "/test.png", ResultOpts: types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/test.png"}},
+					},
+				},
+			},
+		},
 	}
 
 	ctx.Config = cfg
 	err := prepareProject(ctx)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, want, cfg.Projects)
 }
 
@@ -189,6 +216,35 @@ func Test_prepareProject_MissingMandatory_Fail(t *testing.T) {
 	assert.Contains(t, err.Error(), "project=test, missing mandatory group name:")
 }
 
+func Test_prepareProject_validRegexTest_Fail(t *testing.T) {
+	ctx := context.TestContext(nil)
+	ctx.WorkingDir = "/app"
+
+	cfg := &config.Config{
+		HTTP:            config.HTTPConfig{},
+		AcceptTypeFiles: []string{types.TypePNG},
+		ResizeCGI:       config.ResizeCGIConfig{},
+		Projects: []config.Project{
+			{
+				ID: "test",
+				Endpoints: []config.Endpoint{
+					{
+						Regex: "(?<source>.*)",
+						RegexTests: []config.RegexTest{
+							{Path: "/test.png", ResultOpts: types.ResizeOption{}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ctx.Config = cfg
+	err := prepareProject(ctx)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "project=test, regex test isn't valid (?<source>.*): fail to validate RegexTest /test.png")
+}
+
 func TestGetRootPreRunEFn_Success(t *testing.T) {
 	ctx := context.TestContext(nil)
 	ctx.WorkingDir = "/app"
@@ -198,7 +254,9 @@ func TestGetRootPreRunEFn_Success(t *testing.T) {
 	path := ctx.WorkingDir
 	_ = ctx.Fs.Mkdir(path, 0775)
 	globalStr := "accept_type_files: ['txt']\nresize_type_files: ['png']"
-	projectStr := "projects: [{id: test, hostname: foo.com, storage: {type: foo}, endpoints: [{regex: '/(?<source>.*)'}]}]"
+	projectStr1 := "{id: test, hostname: foo.com, storage: {type: foo}, endpoints: [{regex: '/(?<source>.*)'}]}"
+	projectStr2 := "{id: test2, hostname: bar.com, storage: {type: foo}}"
+	projectStr := "projects: [" + projectStr1 + "," + projectStr2 + "]"
 	_ = afero.WriteFile(ctx.Fs, fmt.Sprintf("%s/config.yml", path), []byte(globalStr+"\n"+projectStr), 0644)
 	viper.Reset()
 	viper.SetFs(ctx.Fs)

@@ -15,7 +15,8 @@ import (
 
 func Test_CreateServerHTTP_Success(t *testing.T) {
 	ctx := context.TestContext(nil)
-	e := CreateServerHTTP(ctx)
+	e, err := CreateServerHTTP(ctx)
+	assert.NoError(t, err)
 
 	assert.NotNil(t, e)
 	routes := e.Routes()
@@ -36,7 +37,8 @@ func Test_CreateServerHTTP_Success(t *testing.T) {
 func Test_CreateServerHTTP_CGI_Success(t *testing.T) {
 	ctx := context.TestContext(nil)
 	ctx.Config.ResizeCGI.Enabled = true
-	e := CreateServerHTTP(ctx)
+	e, err := CreateServerHTTP(ctx)
+	assert.NoError(t, err)
 	assert.NotNil(t, e)
 	routes := e.Routes()
 
@@ -58,7 +60,8 @@ func Test_CreateServerHTTP_HostNotFound_Fail(t *testing.T) {
 	ctx := context.TestContext(buffer)
 	ctx.LogLevel.Set(slog.LevelDebug)
 
-	e := CreateServerHTTP(ctx)
+	e, err := CreateServerHTTP(ctx)
+	assert.NoError(t, err)
 	assert.NotNil(t, e)
 
 	go assert.NotPanics(t, func() {
@@ -67,7 +70,7 @@ func Test_CreateServerHTTP_HostNotFound_Fail(t *testing.T) {
 	})
 	time.Sleep(200 * time.Millisecond)
 
-	_, err := http.Get(fmt.Sprintf("http://%s", e.Server.Addr))
+	_, err = http.Get(fmt.Sprintf("http://%s", e.Server.Addr))
 	assert.Nil(t, err)
 	assert.Contains(t, buffer.String(), "host not found:")
 
@@ -83,10 +86,12 @@ func Test_CreateServerHTTP_HostFound_Success(t *testing.T) {
 		{
 			ID:       "localhost",
 			Hostname: "127.0.0.1",
+			Storage:  config.StorageConfig{Type: "fs", Config: map[string]interface{}{"prefix_path": "/app"}},
 		},
 	}
 
-	e := CreateServerHTTP(ctx)
+	e, err := CreateServerHTTP(ctx)
+	assert.NoError(t, err)
 	assert.NotNil(t, e)
 
 	go assert.NotPanics(t, func() {
@@ -95,7 +100,7 @@ func Test_CreateServerHTTP_HostFound_Success(t *testing.T) {
 	})
 	time.Sleep(200 * time.Millisecond)
 
-	_, err := http.Get(fmt.Sprintf("http://%s", e.Server.Addr))
+	_, err = http.Get(fmt.Sprintf("http://%s", e.Server.Addr))
 	assert.Nil(t, err)
 	assert.Contains(t, buffer.String(), "host found:")
 	_ = e.Close()
@@ -108,7 +113,8 @@ func Test_CreateServerHTTP_CGIMiddleware_Fail(t *testing.T) {
 	ctx.Config.ResizeCGI.AllowSelfDomain = true
 	ctx.LogLevel.Set(slog.LevelDebug)
 
-	e := CreateServerHTTP(ctx)
+	e, err := CreateServerHTTP(ctx)
+	assert.NoError(t, err)
 	assert.NotNil(t, e)
 
 	go assert.NotPanics(t, func() {
@@ -123,6 +129,18 @@ func Test_CreateServerHTTP_CGIMiddleware_Fail(t *testing.T) {
 	_ = e.Close()
 }
 
+func Test_CreateServerHTTP_initRouter_Fail(t *testing.T) {
+	ctx := context.TestContext(nil)
+	ctx.Config.Projects = []config.Project{
+		{ID: "id", Hostname: "example.com", Storage: config.StorageConfig{Type: "wrong"}},
+	}
+
+	e, err := CreateServerHTTP(ctx)
+	assert.Error(t, err)
+	assert.NotNil(t, e)
+	assert.Contains(t, err.Error(), "project=id, failed to create storage instance: config storage type 'wrong' does not exist")
+}
+
 func Test_initRouter_WithPrefix_Success(t *testing.T) {
 	ctx := context.TestContext(nil)
 
@@ -131,10 +149,12 @@ func Test_initRouter_WithPrefix_Success(t *testing.T) {
 			ID:         "with-prefix",
 			Hostname:   "with-prefix.com",
 			PrefixPath: "prefix",
+			Storage:    config.StorageConfig{Type: "fs", Config: map[string]interface{}{"prefix_path": "/app"}},
 		},
 	}
 
-	hosts := initRouter(ctx, ctx.Config)
+	hosts, err := initRouter(ctx, ctx.Config)
+	assert.NoError(t, err)
 	host, found := hosts["with-prefix.com"]
 	assert.True(t, found)
 
@@ -160,10 +180,12 @@ func Test_initRouter_NoPrefix_Success(t *testing.T) {
 		{
 			ID:       "no-prefix",
 			Hostname: "no-prefix.com",
+			Storage:  config.StorageConfig{Type: "fs", Config: map[string]interface{}{"prefix_path": "/app"}},
 		},
 	}
 
-	hosts := initRouter(ctx, ctx.Config)
+	hosts, err := initRouter(ctx, ctx.Config)
+	assert.NoError(t, err)
 	host, found := hosts["no-prefix.com"]
 	assert.True(t, found)
 
@@ -180,4 +202,19 @@ func Test_initRouter_NoPrefix_Success(t *testing.T) {
 	if len(mandatoryRoutes) > 0 {
 		assert.Fail(t, fmt.Sprintf("Missing mandatory routes: %v", mandatoryRoutes))
 	}
+}
+
+func Test_initRouter_CreateStorage_Fail(t *testing.T) {
+	ctx := context.TestContext(nil)
+
+	ctx.Config.Projects = []config.Project{
+		{
+			ID:       "id",
+			Hostname: "example.com",
+			Storage:  config.StorageConfig{Type: "wrong"},
+		},
+	}
+
+	_, err := initRouter(ctx, ctx.Config)
+	assert.Error(t, err)
 }
