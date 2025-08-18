@@ -27,7 +27,7 @@ sub vcl_recv {
             return (synth(405, "Not allowed."));
         }
         if (req.http.X-Cache-Tag) {
-            ban("obj.http.X-Cache-Tags ~ " + req.http.X-Cache-Tag);
+            ban("obj.http.Cache-Tag ~ " + req.http.X-Cache-Tag);
         }
         return (synth(200, "Ban added."));
     }

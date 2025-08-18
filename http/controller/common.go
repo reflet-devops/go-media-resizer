@@ -69,13 +69,13 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 		return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to read data %s", opts.Source))
 	}
 	contentHash, _ := hash.GenerateMD5FromString(string(data))
-	
+
 	c.Response().Header().Add(echo.HeaderContentLength, strconv.Itoa(len(data)))
 	c.Response().Header().Add("Date", time.Now().In(TimeLocationGMT).Format(time.RFC1123))
 	c.Response().Header().Add("ETag", contentHash)
 	c.Response().Header().Add(echo.HeaderVary, strings.Join(vary, ", "))
 	if opts.HasTags() {
-		c.Response().Header().Add("X-Cache-Tags", opts.TagsString())
+		c.Response().Header().Add("Cache-Tag", opts.TagsString())
 	}
 
 	return c.Blob(http.StatusOK, types.GetMimeType(opts.Format), data)
