@@ -24,13 +24,13 @@ func GetMedia(ctx *context.Context, project *config.Project, storage types.Stora
 			if opts == nil {
 				continue
 			}
-
+			
 			content, errGetFile := storage.GetFile(opts.Source)
 			if errGetFile != nil {
 				ctx.Logger.Debug(fmt.Sprintf("failed to get file %s: %s", errGetFile.Error(), opts.Source))
 				return c.String(http.StatusNotFound, "file not found")
 			}
-
+			opts.AddTag(types.GetTagSourcePathHash(opts.Source))
 			return SendStream(ctx, c, opts, content)
 		}
 		return c.String(http.StatusNotFound, "file not found")

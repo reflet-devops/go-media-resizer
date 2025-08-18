@@ -56,3 +56,24 @@ func TestResizeOption_NeedResize(t *testing.T) {
 		})
 	}
 }
+
+func TestHasTags_True(t *testing.T) {
+	opts := ResizeOption{Tags: []string{"foo"}}
+	assert.True(t, opts.HasTags())
+}
+
+func TestHasTags_False(t *testing.T) {
+	opts := ResizeOption{Tags: []string{}}
+	assert.False(t, opts.HasTags())
+}
+
+func TestAddTag(t *testing.T) {
+	opts := ResizeOption{}
+	opts.AddTag("foo")
+	assert.Equal(t, []string{"foo"}, opts.Tags)
+}
+
+func TestTagsString(t *testing.T) {
+	opts := ResizeOption{Tags: []string{"foo", "bar"}}
+	assert.Equal(t, "foo,bar", opts.TagsString())
+}

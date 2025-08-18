@@ -7,11 +7,13 @@ import (
 	"github.com/jonboulle/clockwork"
 	libMinio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/minio/minio-go/v7/pkg/notification"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -26,7 +28,7 @@ func init() {
 	TypeStorageMapping[MinioKey] = createMinioStorage
 }
 
-var _ types.Storage = &fs{}
+var _ types.Storage = &minio{}
 
 type ConfigMinio struct {
 	ConfigClientMinio `mapstructure:",squash"`
@@ -59,12 +61,31 @@ func (m *minio) Type() string {
 	return MinioKey
 }
 
-func (m *minio) GetPrefix() string {
-	return m.cfg.PrefixPath
+func (m *minio) getFullPath(path string) string {
+	path = strings.TrimLeft(path, "/")
+	if m.cfg.PrefixPath == "" {
+		return path
+	}
+	return strings.Join([]string{m.cfg.PrefixPath, path}, "/")
 }
 
 func (m *minio) GetFile(path string) (io.Reader, error) {
-	return m.getClient().GetObject(builtinCtx.Background(), m.cfg.BucketName, filepath.Join(m.cfg.PrefixPath, path), libMinio.GetObjectOptions{})
+	object, err := m.getClient().GetObject(builtinCtx.Background(), m.cfg.BucketName, filepath.Join(m.cfg.PrefixPath, path), libMinio.GetObjectOptions{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	stat, errStat := object.Stat()
+	if errStat != nil {
+		return nil, errStat
+	}
+
+	if stat.Size == 0 {
+		return nil, os.ErrNotExist
+	}
+
+	return object, err
 }
 
 func (m *minio) getClient() types.MinioClient {
@@ -102,6 +123,42 @@ func (m *minio) startFallback() {
 					m.mx.Unlock()
 				}
 			}
+		case <-m.ctx.Done():
+			return
+		}
+	}
+}
+
+func (m *minio) NotifyFileChange(chanEvent chan types.Events) {
+	eventsTypes := []string{
+		string(notification.ObjectCreatedPut),
+		string(notification.ObjectCreatedPost),
+		string(notification.ObjectCreatedCopy),
+		string(notification.ObjectRemovedDelete),
+	}
+	minioChanEvent := m.primaryClient.ListenBucketNotification(
+		builtinCtx.Background(),
+		m.cfg.BucketName,
+		m.getFullPath("*"),
+		"",
+		eventsTypes,
+	)
+	for {
+		select {
+		case minioEvent := <-minioChanEvent:
+			if minioEvent.Err != nil {
+				m.ctx.Logger.Error(fmt.Sprintf("minio notify failed: %v", minioEvent.Err))
+				continue
+			}
+			events := types.Events{}
+			for _, record := range minioEvent.Records {
+				event := types.Event{
+					Type: types.EventTypePurge,
+					Path: strings.Replace(record.S3.Object.Key, m.getFullPath(""), "", 1),
+				}
+				events = append(events, event)
+			}
+			chanEvent <- events
 		case <-m.ctx.Done():
 			return
 		}

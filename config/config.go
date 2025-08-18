@@ -24,8 +24,8 @@ type Project struct {
 	Hostname   string `mapstructure:"hostname" validate:"required"`
 	PrefixPath string `mapstructure:"prefix_path"`
 
-	Storage StorageConfig `mapstructure:"storage"  validate:"required"`
-	Caches  []CacheConfig `mapstructure:"caches" validate:"dive"`
+	Storage     StorageConfig      `mapstructure:"storage"  validate:"required"`
+	PurgeCaches []PurgeCacheConfig `mapstructure:"purge_caches" validate:"dive"`
 
 	Endpoints []Endpoint `mapstructure:"endpoints" validate:"required,min=1,dive"`
 
@@ -58,7 +58,7 @@ type StorageConfig struct {
 	Config map[string]interface{} `mapstructure:"config,omitempty"`
 }
 
-type CacheConfig struct {
+type PurgeCacheConfig struct {
 	Type   string                 `mapstructure:"type" validate:"required,excludesall=!@#$ "`
 	Config map[string]interface{} `mapstructure:"config,omitempty"`
 }

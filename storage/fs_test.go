@@ -19,11 +19,6 @@ func Test_fs_Type(t *testing.T) {
 	assert.Equal(t, FsKey, storage.Type())
 }
 
-func Test_fs_GetPrefix(t *testing.T) {
-	storage := &fs{cfg: ConfigFs{PrefixPath: "/app"}}
-	assert.Equal(t, "/app", storage.GetPrefix())
-}
-
 func Test_createFsStorage(t *testing.T) {
 	ctx := context.TestContext(nil)
 
@@ -139,4 +134,10 @@ func Test_fs_GetFile(t *testing.T) {
 			assert.Equalf(t, tt.want, got, "GetFile(%v)", tt.path)
 		})
 	}
+}
+
+func Test_fs_NotifyFileChange(t *testing.T) {
+	chanEvents := make(chan types.Events, 1)
+	f := fs{}
+	f.NotifyFileChange(chanEvents)
 }

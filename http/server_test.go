@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
+	mockTypes "github.com/reflet-devops/go-media-resizer/mocks/types"
+	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -204,6 +207,39 @@ func Test_initRouter_NoPrefix_Success(t *testing.T) {
 	}
 }
 
+func Test_initRouter_WithPurgeCache_Success(t *testing.T) {
+	ctx := context.TestContext(nil)
+
+	ctx.Config.Projects = []config.Project{
+		{
+			ID:          "id",
+			Hostname:    "example.com",
+			Storage:     config.StorageConfig{Type: "fs", Config: map[string]interface{}{"prefix_path": "/app"}},
+			PurgeCaches: []config.PurgeCacheConfig{{Type: "varnish-url", Config: map[string]interface{}{"server": "127.0.0.1"}}},
+		},
+	}
+
+	_, err := initRouter(ctx, ctx.Config)
+	assert.NoError(t, err)
+}
+
+func Test_initRouter_CreatePurgeCache_Failed(t *testing.T) {
+	ctx := context.TestContext(nil)
+
+	ctx.Config.Projects = []config.Project{
+		{
+			ID:          "id",
+			Hostname:    "example.com",
+			Storage:     config.StorageConfig{Type: "fs", Config: map[string]interface{}{"prefix_path": "/app"}},
+			PurgeCaches: []config.PurgeCacheConfig{{Type: "wrong"}},
+		},
+	}
+
+	_, err := initRouter(ctx, ctx.Config)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "config purge cache type 'wrong' does not exist")
+}
+
 func Test_initRouter_CreateStorage_Fail(t *testing.T) {
 	ctx := context.TestContext(nil)
 
@@ -217,4 +253,25 @@ func Test_initRouter_CreateStorage_Fail(t *testing.T) {
 
 	_, err := initRouter(ctx, ctx.Config)
 	assert.Error(t, err)
+}
+
+func Test_listenFileChange_Success(t *testing.T) {
+	ctx := context.TestContext(nil)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	var chanEvents chan types.Events
+	events := types.Events{{Type: types.EventTypePurge, Path: "/test.txt"}}
+
+	storageMock := mockTypes.NewMockStorage(ctrl)
+	storageMock.EXPECT().NotifyFileChange(gomock.Any()).Do(func(cEvents chan types.Events) { chanEvents = cEvents }).Times(1)
+
+	purgeMock := mockTypes.NewMockPurgeCache(ctrl)
+	purgeMock.EXPECT().Purge(gomock.Eq(events)).Times(1)
+	purgeCaches := []types.PurgeCache{purgeMock}
+
+	listenFileChange(ctx, purgeCaches, storageMock)
+	time.Sleep(100 * time.Millisecond)
+	chanEvents <- events
+	ctx.Cancel()
 }

@@ -114,7 +114,7 @@ func TestSendStream(t *testing.T) {
 	}{
 		{
 			name:         "successWithPlainText",
-			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypeText, Source: "/text.txt"},
+			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypeText, Source: "/text.txt", Tags: []string{"tag1"}},
 			headerAccept: "text/plain",
 			contentFn: func() io.Reader {
 				return bytes.NewReader([]byte("hello"))
