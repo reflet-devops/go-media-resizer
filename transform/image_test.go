@@ -47,8 +47,14 @@ func TestResize(t *testing.T) {
 		},
 		{
 			name:    "successWithJpegFitCrop",
-			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: TypeFitCrop, Source: "/fixtures/paysage.jpg", Height: 100, Width: 100},
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitCrop, Source: "/fixtures/paysage.jpg", Height: 100, Width: 100},
 			want:    "5e932cfd7e6451d2289ce0d9cab7384cf07d80ca4b5b96e677f8a0cd9e19c7f8",
+			wantErr: assert.NoError,
+		},
+		{
+			name:    "successWithJpegFitScaleDown",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitScaleDown, Source: "/fixtures/paysage.jpg", Height: 100},
+			want:    "2045cafcfe4d96ec318e272a9801b874e48cd01b060665669d5206afeab24910",
 			wantErr: assert.NoError,
 		},
 
@@ -61,7 +67,7 @@ func TestResize(t *testing.T) {
 		},
 		{
 			name:    "successWithPngFitCrop",
-			opts:    &types.ResizeOption{OriginFormat: types.TypePNG, Fit: TypeFitCrop, Source: "/fixtures/paysage.png", Height: 100, Width: 100},
+			opts:    &types.ResizeOption{OriginFormat: types.TypePNG, Fit: types.TypeFitCrop, Source: "/fixtures/paysage.png", Height: 100, Width: 100},
 			want:    "aa3567b58510683cfd955301ac18e2e0c7c4c34d5428fa6b2afed42be89ef8b4",
 			wantErr: assert.NoError,
 		},
@@ -246,6 +252,17 @@ func TestTransform(t *testing.T) {
 			wantErr: assert.NoError,
 		},
 		{
+			name:    "successWithBlur",
+			opts:    &types.ResizeOption{Format: types.TypeJPEG, OriginFormat: types.TypeJPEG, Width: 100, Blur: 1},
+			wantFn:  func() string { return "195ede3ecc0f7f92e01cc27aad90e39160c128fe16ede35cc34a346031feffb3" },
+			wantErr: assert.NoError,
+		},
+		{
+			name:    "failedToFitCropWithoutHeight",
+			opts:    &types.ResizeOption{Format: types.TypeJPEG, OriginFormat: types.TypeJPEG, Fit: types.TypeFitCrop, Width: 100},
+			wantErr: assert.Error,
+		},
+		{
 			name:    "failedToDecode",
 			file:    strings.NewReader("unknown"),
 			opts:    &types.ResizeOption{Format: types.TypeJPEG, OriginFormat: types.TypeJPEG, Width: 100},
@@ -281,4 +298,13 @@ func TestTransform(t *testing.T) {
 
 		})
 	}
+}
+
+func TestAdjust(t *testing.T) {
+	file, errOpen := os.Open("../fixtures/paysage.png")
+	assert.NoError(t, errOpen)
+	img, _, errDecode := image.Decode(file)
+	assert.NoError(t, errDecode)
+	got := Adjust(img, &types.ResizeOption{})
+	assert.NotNil(t, got)
 }

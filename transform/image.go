@@ -15,12 +15,8 @@ import (
 	"slices"
 )
 
-const (
-	TypeFitCrop = "crop"
-)
-
 func Transform(file io.Reader, opts *types.ResizeOption) (io.Reader, error) {
-	if !opts.NeedResize() && !opts.NeedFormat() {
+	if !opts.NeedTransform() {
 		return file, nil
 	}
 
@@ -30,7 +26,14 @@ func Transform(file io.Reader, opts *types.ResizeOption) (io.Reader, error) {
 	}
 
 	if opts.NeedResize() {
+		if opts.Fit == types.TypeFitCrop && (opts.Width == 0 || opts.Height == 0) {
+			return nil, fmt.Errorf("cannot crop without width and height")
+		}
 		img = Resize(img, opts)
+	}
+
+	if opts.NeedAdjust() {
+		img = Adjust(img, opts)
 	}
 
 	imgFormated, errFormat := Format(img, opts)
@@ -45,13 +48,22 @@ func Resize(img image.Image, opts *types.ResizeOption) image.Image {
 	var imgResize *image.NRGBA
 
 	switch opts.Fit {
-	case TypeFitCrop:
+	case types.TypeFitCrop:
 		imgResize = imaging.CropCenter(img, opts.Width, opts.Height)
+	case types.TypeFitScaleDown:
+		imgResize = imaging.Fit(img, opts.Width, opts.Height, imaging.Lanczos)
 	default:
 		imgResize = imaging.Resize(img, opts.Width, opts.Height, imaging.Lanczos)
 	}
 
 	return imgResize
+}
+
+func Adjust(img image.Image, opts *types.ResizeOption) image.Image {
+	for _, fn := range adjustFnList {
+		img = fn(img, opts)
+	}
+	return img
 }
 
 func Format(img image.Image, opts *types.ResizeOption) (io.Reader, error) {

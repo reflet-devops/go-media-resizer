@@ -14,8 +14,16 @@ type ResizeOption struct {
 	Quality      int    `mapstructure:"quality"`
 	Fit          string `mapstructure:"fit"`
 	Source       string `mapstructure:"source"`
-	Headers      Headers
-	Tags         []string
+
+	Blur       float64 `mapstructure:"blur"`
+	Brightness float64 `mapstructure:"brightness"`
+	Saturation float64 `mapstructure:"saturation"`
+	Contrast   float64 `mapstructure:"contrast"`
+	Sharpen    float64 `mapstructure:"sharpen"`
+	Gamma      float64 `mapstructure:"gamma"`
+
+	Headers Headers
+	Tags    []string
 }
 
 func (r *ResizeOption) HasTags() bool {
@@ -37,7 +45,10 @@ func (r *ResizeOption) NeedResize() bool {
 func (r *ResizeOption) NeedFormat() bool {
 	return r.OriginFormat != r.Format
 }
+func (r *ResizeOption) NeedAdjust() bool {
+	return r.Blur != 0 || r.Brightness != 0 || r.Saturation != 0 || r.Contrast != 0 || r.Sharpen != 0 || r.Gamma != 0
+}
 
 func (r *ResizeOption) NeedTransform() bool {
-	return r.NeedResize() || r.NeedFormat()
+	return r.NeedResize() || r.NeedAdjust() || r.NeedFormat()
 }
