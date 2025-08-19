@@ -20,7 +20,7 @@ func Test_GetValidateRun_Success(t *testing.T) {
 	cmd.SetErr(io.Discard)
 	path := ctx.WorkingDir
 	_ = ctx.Fs.Mkdir(path, 0775)
-	globalStr := "accept_type_files: ['txt']\nresize_type_files: ['png']"
+	globalStr := "accept_type_files: ['txt']\nresize_type_files: ['png']\nhttp: {forwarded_headers_trusted_ip: [88.1.0.0/16]}"
 	projectStr := "projects: [{id: test, hostname: foo.com, storage: {type: foo}, endpoints: [{regex: '/(?<source>.*)'}]}]"
 	_ = afero.WriteFile(ctx.Fs, fmt.Sprintf("%s/config.yml", path), []byte(globalStr+"\n"+projectStr), 0644)
 	viper.Reset()

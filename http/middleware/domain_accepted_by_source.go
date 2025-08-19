@@ -5,6 +5,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
+	"github.com/reflet-devops/go-media-resizer/logger"
 	"net/http"
 	"slices"
 )
@@ -28,7 +29,7 @@ func (d DomainAcceptedBySource) Handler(next echo.HandlerFunc) echo.HandlerFunc 
 
 		isAccepted := d.Validate(source, host)
 		if !isAccepted {
-			d.ctx.Logger.Error(fmt.Sprintf("domain not allowed: %s", source))
+			d.ctx.Logger.Error(fmt.Sprintf("domain not allowed: %s", source), logger.RequestIDKey, c.Request().Header.Get(echo.HeaderXRequestID))
 			return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("domain not allowed: %s", source))
 		}
 

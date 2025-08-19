@@ -3,14 +3,19 @@ package http
 import (
 	"bytes"
 	"fmt"
+	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/http/route"
 	mockTypes "github.com/reflet-devops/go-media-resizer/mocks/types"
 	"github.com/reflet-devops/go-media-resizer/types"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"slices"
 	"testing"
 	"time"
@@ -24,10 +29,10 @@ func Test_CreateServerHTTP_Success(t *testing.T) {
 	assert.NotNil(t, e)
 	routes := e.Routes()
 
-	mandatoryRoutes := make([]string, len(MandatoryRoutes))
-	copy(mandatoryRoutes, MandatoryRoutes)
-	for _, route := range routes {
-		index := slices.Index(mandatoryRoutes, route.Path)
+	mandatoryRoutes := make([]string, len(route.MandatoryRoutes))
+	copy(mandatoryRoutes, route.MandatoryRoutes)
+	for _, r := range routes {
+		index := slices.Index(mandatoryRoutes, r.Path)
 		if index != -1 {
 			mandatoryRoutes = slices.Delete(mandatoryRoutes, index, index+1)
 		}
@@ -35,6 +40,18 @@ func Test_CreateServerHTTP_Success(t *testing.T) {
 	if len(mandatoryRoutes) > 0 {
 		assert.Fail(t, fmt.Sprintf("Missing mandatory routes: %v", mandatoryRoutes))
 	}
+	assert.Equal(t, os.Stdout, e.Logger.Output())
+}
+
+func Test_CreateServerHTTP_MidllewareLogger_Fail(t *testing.T) {
+	ctx := context.TestContext(nil)
+	ctx.Config.HTTP.AccessLogPath = "/path/log.txt"
+	ctx.Fs = afero.NewReadOnlyFs(ctx.Fs)
+
+	_, err := CreateServerHTTP(ctx)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "can't set access log middleware: ")
+
 }
 
 func Test_CreateServerHTTP_CGI_Success(t *testing.T) {
@@ -48,10 +65,10 @@ func Test_CreateServerHTTP_CGI_Success(t *testing.T) {
 	assert.NotNil(t, e)
 	routes := e.Routes()
 
-	mandatoryRoutes := make([]string, len(CgiExtraRoutes))
-	copy(mandatoryRoutes, CgiExtraRoutes)
-	for _, route := range routes {
-		index := slices.Index(mandatoryRoutes, route.Path)
+	mandatoryRoutes := make([]string, len(route.CgiExtraRoutes))
+	copy(mandatoryRoutes, route.CgiExtraRoutes)
+	for _, r := range routes {
+		index := slices.Index(mandatoryRoutes, r.Path)
 		if index != -1 {
 			mandatoryRoutes = slices.Delete(mandatoryRoutes, index, index+1)
 		}
@@ -64,90 +81,133 @@ func Test_CreateServerHTTP_CGI_Success(t *testing.T) {
 	assert.Equal(t, wantHeader, ctx.Config.ResizeCGI.Headers)
 }
 
-func Test_CreateServerHTTP_HostNotFound_Fail(t *testing.T) {
-	buffer := bytes.NewBufferString("")
-	ctx := context.TestContext(buffer)
-	ctx.LogLevel.Set(slog.LevelDebug)
-
-	e, err := CreateServerHTTP(ctx)
-	assert.NoError(t, err)
+func Test_createServerHTTP(t *testing.T) {
+	e := createServerHTTP()
 	assert.NotNil(t, e)
-
-	go assert.NotPanics(t, func() {
-		err := e.Start("127.0.0.1:8081")
-		assert.Contains(t, err.Error(), "http: Server closed")
-	})
-	time.Sleep(200 * time.Millisecond)
-
-	_, err = http.Get(fmt.Sprintf("http://%s", e.Server.Addr))
-	assert.Nil(t, err)
-	assert.Contains(t, buffer.String(), "host not found:")
-
-	_ = e.Close()
+	assert.Equal(t, e.Logger.Output(), io.Discard)
 }
 
-func Test_CreateServerHTTP_HostFound_Success(t *testing.T) {
-	buffer := bytes.NewBufferString("")
-	ctx := context.TestContext(buffer)
-	ctx.LogLevel.Set(slog.LevelDebug)
+func Test_CreateServerHTTP(t *testing.T) {
 
-	ctx.Config.Projects = []config.Project{
+	tests := []struct {
+		name       string
+		assertEcho func(t *testing.T, ctx *context.Context) *echo.Echo
+		checkFn    func(t *testing.T, e *echo.Echo, buff *bytes.Buffer)
+	}{
 		{
-			ID:       "localhost",
-			Hostname: "127.0.0.1",
-			Storage:  config.StorageConfig{Type: "fs", Config: map[string]interface{}{"prefix_path": "/app"}},
+			name: "HostNotFound",
+			assertEcho: func(t *testing.T, ctx *context.Context) *echo.Echo {
+				ctx.LogLevel.Set(slog.LevelDebug)
+				e, err := CreateServerHTTP(ctx)
+				assert.NoError(t, err)
+				assert.NotNil(t, e)
+				return e
+			},
+			checkFn: func(t *testing.T, e *echo.Echo, buff *bytes.Buffer) {
+				go assert.NotPanics(t, func() {
+					err := e.Start("127.0.0.1:8081")
+					assert.Contains(t, err.Error(), "http: Server closed")
+				})
+				time.Sleep(200 * time.Millisecond)
+				_, err := http.Get(fmt.Sprintf("http://%s", e.Server.Addr))
+				assert.Nil(t, err)
+				assert.Contains(t, buff.String(), "host not found:")
+				_ = e.Close()
+			},
+		},
+		{
+			name: "HostFound",
+			assertEcho: func(t *testing.T, ctx *context.Context) *echo.Echo {
+				ctx.LogLevel.Set(slog.LevelDebug)
+				ctx.Config.Projects = []config.Project{
+					{
+						ID:       "localhost",
+						Hostname: "127.0.0.1",
+						Storage:  config.StorageConfig{Type: "fs", Config: map[string]interface{}{"prefix_path": "/app"}},
+					},
+				}
+
+				e, err := CreateServerHTTP(ctx)
+				assert.NoError(t, err)
+				assert.NotNil(t, e)
+				return e
+			},
+			checkFn: func(t *testing.T, e *echo.Echo, buff *bytes.Buffer) {
+				go assert.NotPanics(t, func() {
+					err := e.Start("127.0.0.1:8082")
+					assert.Contains(t, err.Error(), "http: Server closed")
+				})
+				time.Sleep(200 * time.Millisecond)
+				_, err := http.Get(fmt.Sprintf("http://%s", e.Server.Addr))
+				assert.Nil(t, err)
+				assert.Contains(t, buff.String(), "host found:")
+				_ = e.Close()
+			},
+		},
+		{
+			name: "CGIMiddlewareFail",
+			assertEcho: func(t *testing.T, ctx *context.Context) *echo.Echo {
+
+				ctx.Config.ResizeCGI.Enabled = true
+				ctx.Config.ResizeCGI.AllowSelfDomain = true
+
+				e, err := CreateServerHTTP(ctx)
+				assert.NoError(t, err)
+				assert.NotNil(t, e)
+				return e
+			},
+			checkFn: func(t *testing.T, e *echo.Echo, buff *bytes.Buffer) {
+				go assert.NotPanics(t, func() {
+					err := e.Start("127.0.0.1:8084")
+					assert.Contains(t, err.Error(), "http: Server closed")
+				})
+				time.Sleep(200 * time.Millisecond)
+
+				resp, _ := http.Get(fmt.Sprintf("http://%s/cdn-cgi/image/width=200/127.0.0.2/my/resource", e.Server.Addr))
+				assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+
+				_ = e.Close()
+			},
+		},
+		{
+			name: "InitRouterFail",
+			assertEcho: func(t *testing.T, ctx *context.Context) *echo.Echo {
+
+				ctx.Config.Projects = []config.Project{
+					{ID: "id", Hostname: "example.com", Storage: config.StorageConfig{Type: "wrong"}},
+				}
+
+				e, err := CreateServerHTTP(ctx)
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "project=id, failed to create storage instance: config storage type 'wrong' does not exist")
+				return e
+			},
+			checkFn: func(t *testing.T, e *echo.Echo, buff *bytes.Buffer) {},
+		},
+		{
+			name: "getExtractorTrustedOptionFail",
+			assertEcho: func(t *testing.T, ctx *context.Context) *echo.Echo {
+
+				ctx.Config.HTTP.ForwardedHeadersTrustedIP = []string{"a.a.a.a/12"}
+
+				e, err := CreateServerHTTP(ctx)
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "error getting extractor trusted options:")
+				return e
+			},
+			checkFn: func(t *testing.T, e *echo.Echo, buff *bytes.Buffer) {},
 		},
 	}
 
-	e, err := CreateServerHTTP(ctx)
-	assert.NoError(t, err)
-	assert.NotNil(t, e)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 
-	go assert.NotPanics(t, func() {
-		err := e.Start("127.0.0.1:8082")
-		assert.Contains(t, err.Error(), "http: Server closed")
-	})
-	time.Sleep(200 * time.Millisecond)
-
-	_, err = http.Get(fmt.Sprintf("http://%s", e.Server.Addr))
-	assert.Nil(t, err)
-	assert.Contains(t, buffer.String(), "host found:")
-	_ = e.Close()
-}
-
-func Test_CreateServerHTTP_CGIMiddleware_Fail(t *testing.T) {
-	buffer := bytes.NewBufferString("")
-	ctx := context.TestContext(buffer)
-	ctx.Config.ResizeCGI.Enabled = true
-	ctx.Config.ResizeCGI.AllowSelfDomain = true
-	ctx.LogLevel.Set(slog.LevelDebug)
-
-	e, err := CreateServerHTTP(ctx)
-	assert.NoError(t, err)
-	assert.NotNil(t, e)
-
-	go assert.NotPanics(t, func() {
-		err := e.Start("127.0.0.1:8084")
-		assert.Contains(t, err.Error(), "http: Server closed")
-	})
-	time.Sleep(200 * time.Millisecond)
-
-	resp, _ := http.Get(fmt.Sprintf("http://%s/cdn-cgi/image/width=200/127.0.0.2/my/resource", e.Server.Addr))
-	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
-
-	_ = e.Close()
-}
-
-func Test_CreateServerHTTP_initRouter_Fail(t *testing.T) {
-	ctx := context.TestContext(nil)
-	ctx.Config.Projects = []config.Project{
-		{ID: "id", Hostname: "example.com", Storage: config.StorageConfig{Type: "wrong"}},
+			buff := bytes.NewBufferString("")
+			ctx := context.TestContext(buff)
+			e := tt.assertEcho(t, ctx)
+			tt.checkFn(t, e, buff)
+		})
 	}
-
-	e, err := CreateServerHTTP(ctx)
-	assert.Error(t, err)
-	assert.NotNil(t, e)
-	assert.Contains(t, err.Error(), "project=id, failed to create storage instance: config storage type 'wrong' does not exist")
 }
 
 func Test_initRouter_WithPrefix_Success(t *testing.T) {
@@ -278,4 +338,38 @@ func Test_listenFileChange_Success(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 	chanEvents <- events
 	ctx.Cancel()
+}
+
+func Test_getExtractorTrustOptions(t *testing.T) {
+	tests := []struct {
+		name            string
+		trustedIpRanges []string
+		testFn          func(t *testing.T, got []echo.TrustOption, err error)
+	}{
+		{
+			name:            "Success",
+			trustedIpRanges: []string{"192.168.0.0/24", "20.10.1.0/24"},
+			testFn: func(t *testing.T, got []echo.TrustOption, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, got, 3)
+			},
+		},
+		{
+			name:            "Fail",
+			trustedIpRanges: []string{"not/cidr", "20.10.1.0/24"},
+			testFn: func(t *testing.T, got []echo.TrustOption, err error) {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "can't parse CIDR:")
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.TestContext(nil)
+			ctx.Config.HTTP.ForwardedHeadersTrustedIP = tt.trustedIpRanges
+			got, err := getExtractorTrustOptions(ctx)
+			tt.testFn(t, got, err)
+		})
+	}
+
 }

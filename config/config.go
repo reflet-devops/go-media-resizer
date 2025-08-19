@@ -47,7 +47,9 @@ type Endpoint struct {
 }
 
 type HTTPConfig struct {
-	Listen string `mapstructure:"listen" validate:"required"`
+	Listen                    string   `mapstructure:"listen" validate:"required"`
+	AccessLogPath             string   `mapstructure:"access_log_path"`
+	ForwardedHeadersTrustedIP []string `mapstructure:"forwarded_headers_trusted_ip" validate:"omitempty,dive,cidr"`
 }
 
 type ResizeCGIConfig struct {

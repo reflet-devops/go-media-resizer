@@ -15,6 +15,7 @@ import (
 
 func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 	return func(c echo.Context) error {
+		ctx = prepareContext(ctx, c)
 		source := c.Param("source")
 		opts := &types.ResizeOption{Source: source, Headers: types.Headers{}}
 
@@ -27,7 +28,7 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 		fileTypeIsValid := types.ValidateType(fileType, ctx.Config.AcceptTypeFiles)
 		if !fileTypeIsValid {
 			ctx.Logger.Error(fmt.Sprintf("GetMediaCGI: file type not accepted: %s", source))
-			return HTTPErrorFileTypeNotAccepted
+			return c.JSON(buildinHttp.StatusInternalServerError, "file type not accepted")
 		}
 
 		err := mapstructure.Decode(optMap, opts)

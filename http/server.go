@@ -3,36 +3,47 @@ package http
 import (
 	"fmt"
 	"github.com/labstack/echo/v4"
+	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	"github.com/reflet-devops/go-media-resizer/cache_purge"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/http/controller"
 	"github.com/reflet-devops/go-media-resizer/http/controller/health"
 	"github.com/reflet-devops/go-media-resizer/http/middleware"
+	"github.com/reflet-devops/go-media-resizer/http/route"
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"github.com/reflet-devops/go-media-resizer/storage"
 	"github.com/reflet-devops/go-media-resizer/types"
+	"io"
+	"net"
+	"net/http"
+	"os"
 )
 
 type Host struct {
 	Echo *echo.Echo
 }
 
-const RouteHealthCheckPing = "/health/ping"
-const RouteCgiExtraResize = "/cdn-cgi/image/:options/:source"
-
-var MandatoryRoutes = []string{
-	RouteHealthCheckPing,
-}
-
-var CgiExtraRoutes = []string{
-	RouteCgiExtraResize,
-}
-
 func CreateServerHTTP(ctx *context.Context) (*echo.Echo, error) {
 	e := createServerHTTP()
+	e.Logger.SetOutput(os.Stdout)
 
-	for _, route := range MandatoryRoutes {
+	extractorTrustOptions, err := getExtractorTrustOptions(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting extractor trusted options: %w", err)
+	}
+	e.IPExtractor = echo.ExtractIPFromXFFHeader(
+		extractorTrustOptions...,
+	)
+
+	e.Use(echoMiddleware.RequestID())
+	err = middleware.ConfigureAccessLogMiddleware(e, ctx)
+	if err != nil {
+		return nil, fmt.Errorf("can't set access log middleware: %v", err)
+	}
+
+	for _, route := range route.MandatoryRoutes {
 		e.GET(route, health.GetPing)
 	}
 	if ctx.Config.ResizeCGI.Enabled {
@@ -46,7 +57,7 @@ func CreateServerHTTP(ctx *context.Context) (*echo.Echo, error) {
 			ctx.Config.ResizeCGI.Headers[k] = v
 		}
 
-		for _, route := range CgiExtraRoutes {
+		for _, route := range route.CgiExtraRoutes {
 			e.GET(route, controller.GetMediaCGI(ctx), cgiMiddleware.Handler)
 		}
 	}
@@ -65,7 +76,7 @@ func CreateServerHTTP(ctx *context.Context) (*echo.Echo, error) {
 
 		if host == nil {
 			ctx.Logger.Debug(fmt.Sprintf("host not found: %s", hostname))
-			err = echo.ErrNotFound
+			return c.String(http.StatusNotFound, "file not found")
 		} else {
 			ctx.Logger.Debug(fmt.Sprintf("host found: %s", hostname))
 			host.Echo.ServeHTTP(res, req)
@@ -76,11 +87,28 @@ func CreateServerHTTP(ctx *context.Context) (*echo.Echo, error) {
 	return e, nil
 }
 
+func getExtractorTrustOptions(ctx *context.Context) ([]echo.TrustOption, error) {
+	trustOptions := []echo.TrustOption{
+		echo.TrustLoopback(true),
+	}
+
+	for _, ipRange := range ctx.Config.HTTP.ForwardedHeadersTrustedIP {
+		_, ipNet, err := net.ParseCIDR(ipRange)
+		if err != nil {
+			return nil, fmt.Errorf("can't parse CIDR: %v", err)
+		}
+
+		trustOptions = append(trustOptions, echo.TrustIPRange(ipNet))
+	}
+
+	return trustOptions, nil
+}
+
 func createServerHTTP() *echo.Echo {
 	e := echo.New()
 	e.HideBanner = true
 	e.HidePort = true
-
+	e.Logger.SetOutput(io.Discard)
 	return e
 }
 

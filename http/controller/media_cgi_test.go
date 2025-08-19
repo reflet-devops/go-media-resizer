@@ -18,7 +18,6 @@ import (
 func Test_GetMediaCGI_AcceptedType_Fail(t *testing.T) {
 
 	resource := "resource.txt"
-	want := HTTPErrorFileTypeNotAccepted
 	acceptedFileTypes := []string{types.TypePNG}
 
 	ctx := context.TestContext(nil)
@@ -36,8 +35,9 @@ func Test_GetMediaCGI_AcceptedType_Fail(t *testing.T) {
 
 	fn := GetMediaCGI(ctx)
 
-	err := fn(c)
-	assert.Equal(t, want, err)
+	_ = fn(c)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Contains(t, rec.Body.String(), "file type not accepted")
 
 }
 

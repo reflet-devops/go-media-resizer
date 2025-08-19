@@ -13,6 +13,8 @@ import (
 
 func GetMedia(ctx *context.Context, project *config.Project, storage types.Storage) func(c echo.Context) error {
 	return func(c echo.Context) error {
+		ctx = prepareContext(ctx, c)
+
 		requestPath := strings.Replace(c.Request().RequestURI, project.PrefixPath, "", 1)
 		for _, endpoint := range project.Endpoints {
 			opts, errMatch := parser.ParseOption(&endpoint, project, requestPath)
@@ -24,7 +26,7 @@ func GetMedia(ctx *context.Context, project *config.Project, storage types.Stora
 			if opts == nil {
 				continue
 			}
-			
+
 			content, errGetFile := storage.GetFile(opts.Source)
 			if errGetFile != nil {
 				ctx.Logger.Debug(fmt.Sprintf("failed to get file %s: %s", errGetFile.Error(), opts.Source))

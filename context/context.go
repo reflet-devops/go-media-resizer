@@ -74,6 +74,11 @@ func DefaultContext() *Context {
 	}
 }
 
+func (c *Context) Clone() *Context {
+	newCtx := *c
+	return &newCtx
+}
+
 func TestContext(logBuffer io.Writer) *Context {
 	if logBuffer == nil {
 		logBuffer = io.Discard

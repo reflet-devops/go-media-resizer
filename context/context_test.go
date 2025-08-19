@@ -131,6 +131,15 @@ func TestContext_Signal(t *testing.T) {
 	assert.Equal(t, false, running)
 }
 
+func TestContext_Clone(t *testing.T) {
+	want := TestContext(nil)
+	got := want.Clone()
+	assert.Equal(t, want, got)
+
+	got.Fs = nil
+	assert.NotEqual(t, want.Fs, got.Fs)
+}
+
 func TestContext_GetFS(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	c := &Context{
