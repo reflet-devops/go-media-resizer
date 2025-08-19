@@ -5,6 +5,6 @@ const (
 )
 
 type PurgeCache interface {
-	Type() string
+	//Type() string
 	Purge(events Events)
 }

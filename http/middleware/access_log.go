@@ -33,7 +33,7 @@ func ConfigureAccessLogMiddleware(e *echo.Echo, ctx *context.Context) error {
 		LogError:         true,
 		LogHeaders:       []string{"X-Forwarded-For"},
 		Skipper: func(c echo.Context) bool {
-			return c.Request().URL.Path == route.RouteHealthCheckPing
+			return c.Request().URL.Path == route.HealthCheckPingRoute
 		},
 		LogValuesFunc: func(c echo.Context, v echoMiddleware.RequestLoggerValues) error {
 			if v.Error == nil {
