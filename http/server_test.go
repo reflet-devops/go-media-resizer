@@ -169,7 +169,6 @@ func Test_initRouter_WithPrefix_Success(t *testing.T) {
 
 	mandatoryRoutes := []string{
 		"/prefix/*",
-		"/prefix/webhook",
 	}
 	for _, route := range host.Echo.Routes() {
 		index := slices.Index(mandatoryRoutes, route.Path)
@@ -200,7 +199,6 @@ func Test_initRouter_NoPrefix_Success(t *testing.T) {
 
 	mandatoryRoutes := []string{
 		"/*",
-		"/webhook",
 	}
 	for _, route := range host.Echo.Routes() {
 		index := slices.Index(mandatoryRoutes, route.Path)
@@ -266,17 +264,17 @@ func Test_listenFileChange_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	var chanEvents chan types.Events
+	chanEvents := make(chan types.Events, 2024)
 	events := types.Events{{Type: types.EventTypePurge, Path: "/test.txt"}}
 
 	storageMock := mockTypes.NewMockStorage(ctrl)
-	storageMock.EXPECT().NotifyFileChange(gomock.Any()).Do(func(cEvents chan types.Events) { chanEvents = cEvents }).Times(1)
+	storageMock.EXPECT().NotifyFileChange(gomock.Any()).Times(1)
 
 	purgeMock := mockTypes.NewMockPurgeCache(ctrl)
 	purgeMock.EXPECT().Purge(gomock.Eq(events)).Times(1)
 	purgeCaches := []types.PurgeCache{purgeMock}
 
-	listenFileChange(ctx, purgeCaches, storageMock)
+	listenFileChange(ctx, chanEvents, purgeCaches, storageMock)
 	time.Sleep(100 * time.Millisecond)
 	chanEvents <- events
 	ctx.Cancel()

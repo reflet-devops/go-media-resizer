@@ -33,6 +33,8 @@ type Project struct {
 	ExtraAcceptTypeFiles []string      `mapstructure:"extra_accept_type_files"`
 	Headers              types.Headers `mapstructure:"headers"`
 	ExtraHeaders         types.Headers `mapstructure:"extra_headers"`
+
+	WebhookToken string `mapstructure:"webhook_token"`
 }
 
 type Endpoint struct {
