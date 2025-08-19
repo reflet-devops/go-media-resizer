@@ -101,9 +101,10 @@ func initRouter(ctx *context.Context, cfg *config.Config) (map[string]*Host, err
 			return hosts, fmt.Errorf("project=%s, failed to create storage instance: %v", project.ID, err)
 		}
 		host.Echo.GET(fmt.Sprintf("%s/*", project.PrefixPath), controller.GetMedia(ctx, &project, storageInstance))
-		host.Echo.GET(fmt.Sprintf("%s/webhook", project.PrefixPath), controller.GetWebhook(ctx, &project))
 
 		if len(project.PurgeCaches) > 0 {
+			chanEvents := make(chan types.Events, 2024)
+			host.Echo.POST(fmt.Sprintf("%s/webhook", project.PrefixPath), controller.GetWebhook(ctx, chanEvents, &project))
 			purgeCaches := []types.PurgeCache{}
 			for _, purgeCacheCfg := range project.PurgeCaches {
 				purgeCache, errCreatePurge := cache_purge.CreatePurgeCache(ctx, &project, purgeCacheCfg)
@@ -112,15 +113,14 @@ func initRouter(ctx *context.Context, cfg *config.Config) (map[string]*Host, err
 				}
 				purgeCaches = append(purgeCaches, purgeCache)
 			}
-			listenFileChange(ctx, purgeCaches, storageInstance)
+			listenFileChange(ctx, chanEvents, purgeCaches, storageInstance)
 		}
 
 	}
 	return hosts, nil
 }
 
-func listenFileChange(ctx *context.Context, purgeCaches []types.PurgeCache, storageInstance types.Storage) {
-	chanEvents := make(chan types.Events, 2024)
+func listenFileChange(ctx *context.Context, chanEvents chan types.Events, purgeCaches []types.PurgeCache, storageInstance types.Storage) {
 
 	go func(chanEvents chan types.Events, purgeCaches []types.PurgeCache) {
 		for {

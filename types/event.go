@@ -7,6 +7,6 @@ const (
 
 type Events []Event
 type Event struct {
-	Type string `json:"type" mapstructure:"type"`
-	Path string `json:"path" mapstructure:"path"`
+	Type string `json:"type" mapstructure:"type" validate:"required"`
+	Path string `json:"path" mapstructure:"path" validate:"required"`
 }
