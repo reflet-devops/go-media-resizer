@@ -64,6 +64,9 @@ const (
 	ExtensionMEPG = ".mpeg"
 
 	TypeFormatAuto = "auto"
+
+	TypeFitCrop      = "crop"
+	TypeFitScaleDown = "scale-down"
 )
 
 func GetMimeType(code string) string {

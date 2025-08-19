@@ -145,7 +145,7 @@ func TestSendStream(t *testing.T) {
 			wantErr: assert.NoError,
 		},
 		{
-			name:         "failedResize",
+			name:         "failedTransform",
 			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/paysage.png", Width: 500},
 			headerAccept: "image/avif,image/webp,image/png",
 			contentFn: func() io.Reader {
@@ -154,21 +154,7 @@ func TestSendStream(t *testing.T) {
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusInternalServerError, rec.Code)
 				assert.Contains(t, rec.Header().Get(echo.HeaderContentType), types.MimeTypeText)
-				assert.Equal(t, "failed to resize /paysage.png", rec.Body.String())
-			},
-			wantErr: assert.NoError,
-		},
-		{
-			name:         "failedFormat",
-			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/paysage.png"},
-			headerAccept: "image/avif,image/webp,image/png",
-			contentFn: func() io.Reader {
-				return &errorReader{r: bytes.NewBufferString("")}
-			},
-			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
-				assert.Equal(t, http.StatusInternalServerError, rec.Code)
-				assert.Contains(t, rec.Header().Get(echo.HeaderContentType), types.MimeTypeText)
-				assert.Equal(t, "failed to format /paysage.png", rec.Body.String())
+				assert.Equal(t, "failed to transform image /paysage.png", rec.Body.String())
 			},
 			wantErr: assert.NoError,
 		},

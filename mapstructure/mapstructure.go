@@ -8,6 +8,7 @@ func Decode(input interface{}, output interface{}) error {
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
 			mapstructure.StringToTimeDurationHookFunc(),
 			mapstructure.StringToIntHookFunc(),
+			mapstructure.StringToFloat64HookFunc(),
 		),
 		Result: output,
 	}
