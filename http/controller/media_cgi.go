@@ -22,20 +22,12 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 		fileType := types.GetType(fileExtension)
 		opts.OriginFormat = fileType
 
-		optMap := map[string]interface{}{}
-		optRaw := strings.Split(c.Param("options"), ",")
+		optMap := parseOption(c.Param("options"))
 
 		fileTypeIsValid := types.ValidateType(fileType, ctx.Config.AcceptTypeFiles)
 		if !fileTypeIsValid {
 			ctx.Logger.Error(fmt.Sprintf("GetMediaCGI: file type not accepted: %s", source))
 			return HTTPErrorFileTypeNotAccepted
-		}
-
-		for _, optStr := range optRaw {
-			optSplit := strings.Split(optStr, "=")
-			if len(optSplit) == 2 {
-				optMap[optSplit[0]] = optSplit[1]
-			}
 		}
 
 		err := mapstructure.Decode(optMap, opts)
@@ -59,6 +51,24 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 		}
 		return SendStream(ctx, c, opts, buffer)
 	}
+}
+
+func parseOption(optsHeader string) map[string]interface{} {
+	optRaw := strings.Split(optsHeader, ",")
+	optMap := map[string]interface{}{}
+	for _, optStr := range optRaw {
+		optSplit := strings.Split(optStr, "=")
+		if len(optSplit) == 2 {
+			key := optSplit[0]
+			value := optSplit[1]
+
+			key = strings.Trim(key, " ")
+			value = strings.Trim(value, " ")
+
+			optMap[key] = value
+		}
+	}
+	return optMap
 }
 
 func fetchCGIResource(ctx *context.Context, source string) ([]byte, error) {

@@ -222,3 +222,18 @@ func Test_fetchCGIResource_StatusCode_Error(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, "fetchCGIResource: GET http://image.com/image.png: invalid status code status code: 403", err.Error())
 }
+
+func Test_parseOption(t *testing.T) {
+
+	options := " height= 100, width = 100, type=something"
+
+	want := map[string]interface{}{
+		"height": "100",
+		"width":  "100",
+		"type":   "something",
+	}
+
+	got := parseOption(options)
+	assert.Equal(t, want, got)
+
+}
