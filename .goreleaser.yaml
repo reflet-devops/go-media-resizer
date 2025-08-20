@@ -12,34 +12,38 @@ builds:
       - linux
     goarch:
       - amd64
-      - arm64
     ldflags:
       - "-s -w -X github.com/reflet-devops/go-media-resizer/version.Version={{.Tag}} -X github.com/reflet-devops/go-media-resizer/version.Commit={{.ShortCommit}}"
     binary: go-media-resizer
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
+      - CC=gcc
 
 dockers:
   - build_flag_templates:
       - "--platform=linux/arm64"
       - "--provenance=false"
+      - "--build-arg=VERSION={{.Tag}}"
+      - "--build-arg=COMMIT_SHORT={{.ShortCommit}}"
     dockerfile: Dockerfile
     goarch: arm64
     image_templates:
       - "refletdevops/go-media-resizer:v{{ .Version }}-arm64"
     use: buildx
-    ids:
-      - gmr
+    extra_files:
+      - ./
   - build_flag_templates:
       - "--platform=linux/amd64"
       - "--provenance=false"
+      - "--build-arg=VERSION={{.Tag}}"
+      - "--build-arg=COMMIT_SHORT={{.ShortCommit}}"
     dockerfile: Dockerfile
     goarch: amd64
     image_templates:
       - "refletdevops/go-media-resizer:v{{ .Version }}-amd64"
     use: buildx
-    ids:
-      - gmr
+    extra_files:
+      - ./
 
 docker_manifests:
   - image_templates:
@@ -57,9 +61,9 @@ archives:
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
-    builds:
+    ids:
       - gmr
-    format: binary
+    formats: ["binary"]
 
 checksum:
   name_template: "checksums.txt"

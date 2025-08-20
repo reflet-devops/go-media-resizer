@@ -33,6 +33,12 @@ docker build -t go-media-resizer .
 docker run -p 8080:8080 -v ./tmp/config.yml:/config.yml go-media-resizer start -c /config.yml
 ```
 
+#### Docker environment variables
+
+- **GO_MEDIA_RESIZER_CFG**: The content of variable will be print in configuration path ($GO_MEDIA_RESIZER_CONFIG_PATH) only if not empty.
+- **GO_MEDIA_RESIZER_CONFIG_PATH**: Configuration path used to command start. Default: /etc/go-media-resizer/config.yml
+- **LOG_LEVEL**: Chose the log level. Default: INFO
+
 ### Build from Source
 
 #### System Requirements
