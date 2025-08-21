@@ -19,6 +19,7 @@ func Test_validateConfig(t *testing.T) {
 		{
 			name: "success",
 			cfg: &config.Config{
+				PidPath:         "/var/run/go-media-resizer/server.pid",
 				HTTP:            config.HTTPConfig{Listen: "127.0.0.1:8080"},
 				AcceptTypeFiles: []string{types.TypeText},
 				ResizeTypeFiles: []string{types.TypePNG},

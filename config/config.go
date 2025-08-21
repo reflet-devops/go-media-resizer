@@ -10,6 +10,8 @@ const DefaultRequestTimeout = 2 * time.Second
 
 type Config struct {
 	HTTP            HTTPConfig      `mapstructure:"http" validate:"required"`
+
+	PidPath string `mapstructure:"pid_path" validate:"required"`
 	AcceptTypeFiles []string        `mapstructure:"accept_type_files" validate:"required"`
 	ResizeTypeFiles []string        `mapstructure:"resize_type_files" validate:"required"`
 	ResizeCGI       ResizeCGIConfig `mapstructure:"resize_cgi"`
@@ -97,7 +99,8 @@ func (b BasicAuth) Enable() bool {
 
 func DefaultConfig() *Config {
 	return &Config{
-		HTTP: HTTPConfig{Listen: "127.0.0.1:8080"},
+		PidPath: "/var/run/go-media-resizer/server.pid",
+		HTTP:    HTTPConfig{Listen: "127.0.0.1:8080"},
 		ResizeCGI: ResizeCGIConfig{
 			Enabled:           true,
 			AllowSelfDomain:   true,
