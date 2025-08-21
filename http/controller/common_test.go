@@ -191,3 +191,23 @@ func TestSendStream(t *testing.T) {
 		})
 	}
 }
+
+func Test_prepareContext(t *testing.T) {
+	buff := bytes.NewBufferString("")
+	ctx := context.TestContext(buff)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://127.0.0.1"), nil)
+	req.Host = "127.0.0.1"
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	c.Request().Header.Set(echo.HeaderXRequestID, "id")
+	c.Request().Host = "127.0.0.1:8080"
+	c.Request().URL.Path = "/from/test"
+
+	newCtx := prepareContext(ctx, c)
+
+	newCtx.Logger.Error("debug")
+	assert.Contains(t, buff.String(), "level=ERROR msg=debug request_id=id host=127.0.0.1 uri_path=/from/test")
+}

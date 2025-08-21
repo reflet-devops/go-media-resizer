@@ -5,6 +5,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/hash"
+	"github.com/reflet-devops/go-media-resizer/http/urltools"
+	"github.com/reflet-devops/go-media-resizer/logger"
 	"github.com/reflet-devops/go-media-resizer/transform"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"io"
@@ -24,8 +26,6 @@ func init() {
 		panic(err)
 	}
 }
-
-var HTTPErrorFileTypeNotAccepted = echo.NewHTTPError(http.StatusForbidden, "file type not accepted")
 
 func DetectFormatFromHeaderAccept(acceptHeaderValue string, opts *types.ResizeOption) {
 	acceptedFormat := strings.Split(acceptHeaderValue, ",")
@@ -74,4 +74,14 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 	}
 
 	return c.Blob(http.StatusOK, types.GetMimeType(opts.Format), data)
+}
+
+func prepareContext(ctx *context.Context, c echo.Context) *context.Context {
+	newCtx := ctx.Clone()
+	newCtx.Logger = newCtx.Logger.With(
+		logger.RequestIDKey, c.Request().Header.Get(echo.HeaderXRequestID),
+		logger.HostKey, urltools.RemovePortNumber(c.Request().Host),
+		logger.UriPathKey, c.Request().URL.Path,
+	)
+	return newCtx
 }
