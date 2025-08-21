@@ -1,0 +1,20 @@
+#!/bin/sh
+set -e
+
+GO_MEDIA_RESIZER_CONFIG_PATH="/etc/go-media-resizer/config.yml"
+
+if [ -z "$GO_MEDIA_RESIZER_CONFIG_PATH" ]; then
+    GO_MEDIA_RESIZER_CONFIG_PATH="/etc/go-media-resizer/config.yml"
+fi
+
+if [ -n "${GO_MEDIA_RESIZER_CFG}" ]; then
+  echo "Add config from GO_MEDIA_RESIZER_CFG var to ${GO_MEDIA_RESIZER_CONFIG_PATH}"
+  mkdir -p $(dirname "${GO_MEDIA_RESIZER_CONFIG_PATH}")
+  echo "${GO_MEDIA_RESIZER_CFG}" > "${GO_MEDIA_RESIZER_CONFIG_PATH}"
+fi
+
+if [ -z "$1" ]; then
+    /usr/local/bin/go-media-resizer start --level ${LOG_LEVEL:-INFO} -c "${GO_MEDIA_RESIZER_CONFIG_PATH}"
+else
+    exec "$@"
+fi
