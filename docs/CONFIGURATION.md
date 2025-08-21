@@ -8,8 +8,21 @@ The service uses YAML configuration files with the following structure:
 
 ```yaml
 # HTTP server configuration
+pid_path: "/var/run/go-media-resizer/server.pid" # Pid file (required, default /var/run/go-media-resizer/server.pid)
 http:
-  listen: "127.0.0.1:8080"
+  listen: "127.0.0.1:8080"                    # Server listen address (required)
+  access_log_path: "/var/log/access.log"      # Access log file path (optional, outputs to stdout if empty)
+  forwarded_headers_trusted_ip:               # Trusted IP ranges for X-Forwarded-For headers (optional, loopback always trusted)
+    - "10.0.0.0/8"
+    - "172.16.0.0/12"
+    - "192.168.0.0/16"
+  
+  # Prometheus metrics configuration (optional)
+  metrics:
+    enable: true                              # Enable /metrics endpoint (default: false)
+    basic_auth:                               # HTTP Basic Auth for metrics (disabled if username or password empty)
+      username: "admin"
+      password: "secret"
 
 # Accepted file types (without resizing)
 accept_type_files: # Default value
@@ -218,6 +231,99 @@ storage:
 - **Automatic fallback**: Switches to secondary storage on failure
 - **Health checks**: Monitors primary storage health
 
+## Monitoring Configuration
+
+### Access Logging
+
+The service provides structured access logging for HTTP requests:
+
+```yaml
+http:
+  access_log_path: "/var/log/go-media-resizer/access.log"  # File path for access logs
+```
+
+**Access Log Features:**
+- **File output**: Logs to specified file path, or stdout if `access_log_path` is empty or not specified
+- **Structured format**: Consistent structured logging format with key fields
+- **Log rotation**: Supports SIGUSR1 and SIGHUP signals for log rotation
+- **Health check filtering**: Excludes `/health/ping` requests from logs to reduce noise
+- **Automatic fallback**: Falls back to stdout if log file cannot be opened
+
+**Logged Fields:**
+- `remote_ip`: Client IP address from connection
+- `real_ip`: Real client IP considering X-Forwarded-For headers
+- `host`: HTTP Host header value
+- `protocol`: HTTP protocol version (HTTP/1.1, HTTP/2)
+- `method`: HTTP method (GET, POST, etc.)
+- `uri`: Request URI path and query string
+- `status`: HTTP response status code
+- `response_size`: Response body size in bytes
+- `user_agent`: Client User-Agent header
+- `x_forwarded_for`: X-Forwarded-For header value if present
+- `request_id`: Unique request identifier for tracing
+
+**Log Rotation:**
+```bash
+# Signal the service to reopen log files
+kill -SIGUSR1 <pid>
+# or
+kill -SIGHUP <pid>
+```
+
+**Example logrotate configuration:**
+```
+/var/log/go-media-resizer/access.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    postrotate
+        /bin/kill -SIGUSR1 $(cat /var/run/go-media-resizer/server.pid) 2>/dev/null || true
+    endscript
+}
+```
+
+This logrotate configuration:
+- Rotates logs daily with 30 days retention
+- Compresses old logs (delayed by one rotation)
+- Sends SIGUSR1 signal to reload the log file after rotation
+
+### Metrics Configuration
+
+The service can expose Prometheus-compatible metrics:
+
+```yaml
+http:
+  metrics:
+    enable: true                    # Enable /metrics endpoint (default: false)
+    basic_auth:                     # Optional HTTP Basic Auth protection
+      username: "metrics-user"      # Username for Basic Auth
+      password: "secure-password"   # Password for Basic Auth
+```
+
+**Metrics Features:**
+- **Prometheus format**: Standard Prometheus metrics format at `/metrics` endpoint
+- **HTTP metrics**: Request duration, total requests, response sizes, active connections
+- **Optional authentication**: HTTP Basic Auth protection can be enabled
+- **Authentication bypass**: If `username` or `password` is empty, Basic Auth is disabled
+
+**Available Metrics:**
+- `http_request_duration_seconds`: HTTP request duration histogram
+- `http_requests_total`: Total HTTP requests counter (by method, status)
+- `http_response_size_bytes`: HTTP response size histogram
+- `http_requests_in_flight_gauge`: Number of active HTTP connections
+
+**Example metrics endpoint access:**
+```bash
+# Without authentication
+curl http://localhost:8080/metrics
+
+# With Basic Auth (if configured)
+curl -u metrics-user:secure-password http://localhost:8080/metrics
+```
+
 ## Cache Purging Configuration
 
 The service supports automatic cache purging when files are modified in storage. There are two purging strategies: **tag-based** (recommended) and **URL-based**.
@@ -411,8 +517,19 @@ export GO_MEDIA_RESIZER_PROJECTS_0_STORAGE_CONFIG_ENDPOINT="minio.example.com:90
 ## Complete Configuration Example
 
 ```yaml
+pid_path: "/var/run/go-media-resizer/server.pid"
 http:
   listen: "0.0.0.0:8080"
+  access_log_path: "/var/log/go-media-resizer/access.log"
+  forwarded_headers_trusted_ip:
+    - "10.0.0.0/8"
+    - "172.16.0.0/12"
+    - "192.168.0.0/16"
+  metrics:
+    enable: true
+    basic_auth:
+      username: "monitoring"
+      password: "${METRICS_PASSWORD}"
 
 headers:
   cache-control: "public, max-age=31536000"

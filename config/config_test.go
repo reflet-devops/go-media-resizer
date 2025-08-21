@@ -9,8 +9,11 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	got := DefaultConfig()
 	assert.Equal(t,
-		&Config{HTTP: HTTPConfig{
-			Listen: "127.0.0.1:8080"},
+		&Config{
+			PidPath: "/var/run/go-media-resizer/server.pid",
+			HTTP: HTTPConfig{
+				Listen: "127.0.0.1:8080",
+			},
 			ResizeCGI: ResizeCGIConfig{
 				Enabled:           true,
 				AllowSelfDomain:   true,

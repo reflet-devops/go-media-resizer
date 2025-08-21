@@ -14,6 +14,8 @@ A high-performance image resizing service written in Go, providing HTTP endpoint
 - **Real-time notifications**: File events for automatic cache purging
 - **Automatic fallback**: Failover to secondary storage
 - **Customizable headers**: Global and per-project configuration
+- **Prometheus metrics**: HTTP request metrics with optional authentication
+- **Access logging**: Structured logging with log rotation support
 
 ## Quick Start
 
@@ -117,6 +119,9 @@ curl http://media.example.com/resize/500x300-80/product.jpg
 
 # CDN-CGI API (if enabled)
 curl http://localhost:8080/cdn-cgi/image/width=500,height=300,quality=85,format=webp/https://example.com/image.jpg
+
+# Metrics endpoint (Prometheus format)
+curl http://localhost:8080/metrics
 ```
 
 ## Architecture
