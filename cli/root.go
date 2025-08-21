@@ -1,11 +1,13 @@
 package cli
 
 import (
+	"crypto/tls"
 	"fmt"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/parser"
 	"github.com/reflet-devops/go-media-resizer/types"
+	"github.com/valyala/fasthttp"
 	"reflect"
 	"regexp"
 	"slices"
@@ -80,7 +82,16 @@ func GetRootPreRunEFn(ctx *context.Context, validateCfg bool) func(*cobra.Comman
 			return fmt.Errorf("fail to prepare project: %v", errPreparePrj)
 		}
 
+		setHTTPClient(ctx)
 		return nil
+	}
+}
+
+func setHTTPClient(ctx *context.Context) {
+	ctx.HttpClient = &fasthttp.Client{
+		TLSConfig: &tls.Config{
+			InsecureSkipVerify: ctx.Config.HTTP.Client.InsecureSkipVerify,
+		},
 	}
 }
 
