@@ -31,6 +31,7 @@ func ConfigureAccessLogMiddleware(e *echo.Echo, ctx *context.Context) error {
 		LogHost:          true,
 		LogUserAgent:     true,
 		LogError:         true,
+		LogLatency:       true,
 		LogHeaders:       []string{"X-Forwarded-For"},
 		Skipper: func(c echo.Context) bool {
 			return c.Request().URL.Path == route.HealthCheckPingRoute
@@ -51,6 +52,7 @@ func ConfigureAccessLogMiddleware(e *echo.Echo, ctx *context.Context) error {
 					slog.String(logger.UserAgentKey, v.UserAgent),
 					slog.String(logger.XForwardedForKey, xForwardedFor),
 					slog.String(logger.RequestIDKey, v.RequestID),
+					slog.String(logger.LatencyKey, v.Latency.String()),
 				)
 			} else {
 				sloger.LogAttrs(builtCtx.Background(), slog.LevelError, "REQUEST_ERROR",

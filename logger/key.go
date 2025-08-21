@@ -14,4 +14,5 @@ const (
 	UserAgentKey     = "user_agent"
 	XForwardedForKey = "x_forwarded_for"
 	ErrorKey         = "error"
+	LatencyKey       = "latency"
 )
