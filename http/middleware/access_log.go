@@ -7,6 +7,7 @@ import (
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/http/route"
+	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"github.com/reflet-devops/go-media-resizer/logger"
 	"log/slog"
 )
@@ -27,7 +28,6 @@ func ConfigureAccessLogMiddleware(e *echo.Echo, ctx *context.Context) error {
 		LogMethod:        true,
 		LogResponseSize:  true,
 		LogContentLength: true,
-		LogRemoteIP:      true,
 		LogHost:          true,
 		LogUserAgent:     true,
 		LogError:         true,
@@ -38,8 +38,9 @@ func ConfigureAccessLogMiddleware(e *echo.Echo, ctx *context.Context) error {
 		LogValuesFunc: func(c echo.Context, v echoMiddleware.RequestLoggerValues) error {
 			if v.Error == nil {
 				xForwardedFor := c.Request().Header.Get("X-Forwarded-For")
+
 				sloger.LogAttrs(builtCtx.Background(), slog.LevelInfo, "REQUEST",
-					slog.String(logger.RemoteIPKey, v.RemoteIP),
+					slog.String(logger.RemoteIPKey, urltools.RemovePortNumber(c.Request().RemoteAddr)),
 					slog.String(logger.RealIPKey, c.RealIP()),
 					slog.String(logger.HostKey, v.Host),
 					slog.String(logger.ProtocolKey, v.Protocol),
@@ -53,6 +54,7 @@ func ConfigureAccessLogMiddleware(e *echo.Echo, ctx *context.Context) error {
 				)
 			} else {
 				sloger.LogAttrs(builtCtx.Background(), slog.LevelError, "REQUEST_ERROR",
+					slog.String(logger.RemoteIPKey, urltools.RemovePortNumber(c.Request().RemoteAddr)),
 					slog.String(logger.HostKey, v.Host),
 					slog.String(logger.RealIPKey, c.RealIP()),
 					slog.String(logger.UriKey, v.URI),

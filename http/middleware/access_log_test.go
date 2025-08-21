@@ -32,6 +32,7 @@ func Test_ConfigureAccessLogMiddleware(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://127.0.0.1/200"), nil)
 	req.Host = "127.0.0.1"
+	req.RemoteAddr = "127.0.0.1"
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetPath("/200")
@@ -40,6 +41,7 @@ func Test_ConfigureAccessLogMiddleware(t *testing.T) {
 
 	req = httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://127.0.0.1/500"), nil)
 	req.Host = "127.0.0.1"
+	req.RemoteAddr = "127.0.0.1"
 	rec = httptest.NewRecorder()
 	c = e.NewContext(req, rec)
 	c.SetPath("/500")
@@ -48,7 +50,7 @@ func Test_ConfigureAccessLogMiddleware(t *testing.T) {
 
 	buff, _ := afero.ReadFile(ctx.Fs, "/var/access.log")
 
-	assert.Contains(t, string(buff), "level=INFO msg=REQUEST remote_ip=192.0.2.1 real_ip=192.0.2.1 host=127.0.0.1 protocol=HTTP/1.1 method=GET uri=http://127.0.0.1/200 status=200 response_size")
+	assert.Contains(t, string(buff), "level=INFO msg=REQUEST remote_ip=127.0.0.1 real_ip=\"\" host=127.0.0.1 protocol=HTTP/1.1 method=GET uri=http://127.0.0.1/200 status=200 response_size=4 user_agent=\"\" x_forwarded_for=\"\" request_id")
 	assert.Contains(t, string(buff), "level=ERROR msg=REQUEST_ERROR")
 }
 
