@@ -6,7 +6,6 @@ import (
 	appProm "github.com/reflet-devops/go-media-resizer/prometheus"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/spf13/afero"
-	"github.com/valyala/fasthttp"
 	"io"
 	"log/slog"
 	"os"
@@ -74,7 +73,6 @@ func DefaultContext() *Context {
 		done:            make(chan bool),
 		sigs:            sigs,
 		Config:          config.DefaultConfig(),
-		HttpClient:      &fasthttp.Client{},
 		MetricsRegistry: prometheus.NewRegistry(),
 	}
 }

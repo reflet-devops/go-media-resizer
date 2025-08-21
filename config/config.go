@@ -9,8 +9,7 @@ import (
 const DefaultRequestTimeout = 2 * time.Second
 
 type Config struct {
-	HTTP HTTPConfig `mapstructure:"http" validate:"required"`
-
+	HTTP            HTTPConfig      `mapstructure:"http" validate:"required"`
 	AcceptTypeFiles []string        `mapstructure:"accept_type_files" validate:"required"`
 	ResizeTypeFiles []string        `mapstructure:"resize_type_files" validate:"required"`
 	ResizeCGI       ResizeCGIConfig `mapstructure:"resize_cgi"`
@@ -47,10 +46,15 @@ type Endpoint struct {
 }
 
 type HTTPConfig struct {
-	Listen                    string   `mapstructure:"listen" validate:"required"`
-	AccessLogPath             string   `mapstructure:"access_log_path"`
-	ForwardedHeadersTrustedIP []string `mapstructure:"forwarded_headers_trusted_ip" validate:"omitempty,dive,cidr"`
-	Metrics MetricsConfig `mapstructure:"metrics"`
+	Listen                    string          `mapstructure:"listen" validate:"required"`
+	AccessLogPath             string          `mapstructure:"access_log_path"`
+	ForwardedHeadersTrustedIP []string        `mapstructure:"forwarded_headers_trusted_ip" validate:"omitempty,dive,cidr"`
+	Metrics                   MetricsConfig   `mapstructure:"metrics"`
+	Client                    HTTClientConfig `mapstructure:"client"`
+}
+
+type HTTClientConfig struct {
+	InsecureSkipVerify bool `mapstructure:"insecure_skip_verify"`
 }
 
 type MetricsConfig struct {

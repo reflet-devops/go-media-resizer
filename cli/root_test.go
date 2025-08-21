@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"crypto/tls"
 	"fmt"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
@@ -8,6 +9,7 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/valyala/fasthttp"
 	"io"
 	"regexp"
 	"testing"
@@ -465,4 +467,44 @@ func Test_validRegexTest(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_setHTTPClient(t *testing.T) {
+	ctx := context.TestContext(nil)
+
+	tests := []struct {
+		name      string
+		clientCfg config.HTTClientConfig
+		want      *fasthttp.Client
+	}{
+		{
+			name:      "Default",
+			clientCfg: config.HTTClientConfig{},
+			want: &fasthttp.Client{
+				TLSConfig: &tls.Config{
+					InsecureSkipVerify: false,
+				},
+			},
+		},
+		{
+			name: "InsecureTLS",
+			clientCfg: config.HTTClientConfig{
+				InsecureSkipVerify: true,
+			},
+			want: &fasthttp.Client{
+				TLSConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx.Config.HTTP.Client = tt.clientCfg
+			setHTTPClient(ctx)
+			assert.Equal(t, tt.want, ctx.HttpClient)
+		})
+	}
+
 }
