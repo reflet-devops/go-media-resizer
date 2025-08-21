@@ -26,7 +26,8 @@ RUN apt-get update \
   libwebp-dev \
   && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /etc/go-media-resizer /var/log/go-media-resizer
+RUN mkdir -p /etc/go-media-resizer /var/log/go-media-resizer /var/run/go-media-resizer && \
+    chmod 774 /etc/go-media-resizer /var/log/go-media-resizer /var/run/go-media-resizer
 
 COPY docker-entrypoint /usr/local/bin/
 COPY --from=builder /app/go-media-resizer /usr/local/bin/
