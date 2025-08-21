@@ -1,12 +1,15 @@
 package route
 
-const RouteHealthCheckPing = "/health/ping"
-const RouteCgiExtraResize = "/cdn-cgi/image/:options/:source"
+const (
+	HealthCheckPingRoute = "/health/ping"
+	CgiExtraResizeRoute  = "/cdn-cgi/image/:options/:source"
+	MetricsRoute         = "/metrics"
+)
 
 var MandatoryRoutes = []string{
-	RouteHealthCheckPing,
+	HealthCheckPingRoute,
 }
 
 var CgiExtraRoutes = []string{
-	RouteCgiExtraResize,
+	CgiExtraResizeRoute,
 }

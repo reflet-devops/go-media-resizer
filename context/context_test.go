@@ -1,6 +1,7 @@
 package context
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -24,12 +25,13 @@ func TestDefaultContext_Success(t *testing.T) {
 	workingDir, err := os.Getwd()
 	assert.NoError(t, err)
 	want := &Context{
-		WorkingDir: workingDir,
-		Logger:     logger,
-		LogLevel:   level,
-		Fs:         fs,
-		Config:     config.DefaultConfig(),
-		HttpClient: &fasthttp.Client{},
+		WorkingDir:      workingDir,
+		Logger:          logger,
+		LogLevel:        level,
+		Fs:              fs,
+		Config:          config.DefaultConfig(),
+		HttpClient:      &fasthttp.Client{},
+		MetricsRegistry: prometheus.NewRegistry(),
 	}
 	got := DefaultContext()
 	assert.NotNil(t, got.done)
@@ -55,10 +57,11 @@ func TestTestContext(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, opts))
 	fs := afero.NewMemMapFs()
 	want := &Context{
-		Logger:   logger,
-		LogLevel: level,
-		Fs:       fs,
-		Config:   config.DefaultConfig(),
+		Logger:          logger,
+		LogLevel:        level,
+		Fs:              fs,
+		Config:          config.DefaultConfig(),
+		MetricsRegistry: prometheus.NewRegistry(),
 	}
 	got := TestContext(nil)
 	assert.NotNil(t, got.done)
@@ -75,10 +78,11 @@ func TestTestContext_WithLogBuffer(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, opts))
 	fs := afero.NewMemMapFs()
 	want := &Context{
-		Logger:   logger,
-		LogLevel: level,
-		Fs:       fs,
-		Config:   config.DefaultConfig(),
+		Logger:          logger,
+		LogLevel:        level,
+		Fs:              fs,
+		Config:          config.DefaultConfig(),
+		MetricsRegistry: prometheus.NewRegistry(),
 	}
 	got := TestContext(io.Discard)
 	assert.NotNil(t, got.done)

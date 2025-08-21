@@ -50,6 +50,12 @@ type HTTPConfig struct {
 	Listen                    string   `mapstructure:"listen" validate:"required"`
 	AccessLogPath             string   `mapstructure:"access_log_path"`
 	ForwardedHeadersTrustedIP []string `mapstructure:"forwarded_headers_trusted_ip" validate:"omitempty,dive,cidr"`
+	Metrics MetricsConfig `mapstructure:"metrics"`
+}
+
+type MetricsConfig struct {
+	Enable    bool      `mapstructure:"enable"`
+	BasicAuth BasicAuth `mapstructure:"basic_auth"`
 }
 
 type ResizeCGIConfig struct {
@@ -74,6 +80,15 @@ type PurgeCacheConfig struct {
 type RegexTest struct {
 	Path       string             `mapstructure:"path" validate:"required"`
 	ResultOpts types.ResizeOption `mapstructure:"result_opts" validate:"required"`
+}
+
+type BasicAuth struct {
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
+}
+
+func (b BasicAuth) Enable() bool {
+	return b.Username != "" && b.Password != ""
 }
 
 func DefaultConfig() *Config {

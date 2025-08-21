@@ -1,7 +1,9 @@
 package http
 
 import (
+	"crypto/subtle"
 	"fmt"
+	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	"github.com/reflet-devops/go-media-resizer/cache_purge"
@@ -28,11 +30,15 @@ func CreateServerHTTP(ctx *context.Context) (*echo.Echo, error) {
 	e := createServerHTTP()
 	e.Logger.SetOutput(os.Stdout)
 
-	extractorTrustOptions, err := getExtractorTrustOptions(ctx)
+	if ctx.Config.HTTP.Metrics.Enable {
+		configureMetrics(ctx, e)
+	}
 
+	extractorTrustOptions, err := getExtractorTrustOptions(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error getting extractor trusted options: %w", err)
 	}
+
 	e.IPExtractor = echo.ExtractIPFromXFFHeader(
 		extractorTrustOptions...,
 	)
@@ -43,9 +49,8 @@ func CreateServerHTTP(ctx *context.Context) (*echo.Echo, error) {
 		return nil, fmt.Errorf("can't set access log middleware: %v", err)
 	}
 
-	for _, route := range route.MandatoryRoutes {
-		e.GET(route, health.GetPing)
-	}
+	e.GET(route.HealthCheckPingRoute, health.GetPing)
+
 	if ctx.Config.ResizeCGI.Enabled {
 		cgiMiddleware := middleware.NewDomainAcceptedBySource(ctx)
 
@@ -57,9 +62,7 @@ func CreateServerHTTP(ctx *context.Context) (*echo.Echo, error) {
 			ctx.Config.ResizeCGI.Headers[k] = v
 		}
 
-		for _, route := range route.CgiExtraRoutes {
-			e.GET(route, controller.GetMediaCGI(ctx), cgiMiddleware.Handler)
-		}
+		e.GET(route.CgiExtraResizeRoute, controller.GetMediaCGI(ctx), cgiMiddleware.Handler)
 	}
 
 	hosts, err := initRouter(ctx, ctx.Config)
@@ -146,6 +149,35 @@ func initRouter(ctx *context.Context, cfg *config.Config) (map[string]*Host, err
 
 	}
 	return hosts, nil
+}
+
+func configureMetrics(ctx *context.Context, e *echo.Echo) {
+	metricsCfg := ctx.Config.HTTP.Metrics
+
+	e.Use(echoprometheus.NewMiddlewareWithConfig(echoprometheus.MiddlewareConfig{
+		Registerer: ctx.MetricsRegistry,
+	}))
+
+	basicAuthMid := func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			return next(c)
+		}
+	}
+
+	if metricsCfg.BasicAuth.Enable() {
+		basicAuthMid = echoMiddleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
+			// Be careful to use constant time comparison to prevent timing attacks
+			if subtle.ConstantTimeCompare([]byte(username), []byte(metricsCfg.BasicAuth.Username)) == 1 &&
+				subtle.ConstantTimeCompare([]byte(password), []byte(metricsCfg.BasicAuth.Password)) == 1 {
+				return true, nil
+			}
+			return false, nil
+		})
+	}
+
+	e.GET(route.MetricsRoute, echoprometheus.NewHandlerWithConfig(echoprometheus.HandlerConfig{
+		Gatherer: ctx.MetricsRegistry,
+	}), basicAuthMid)
 }
 
 func listenFileChange(ctx *context.Context, chanEvents chan types.Events, purgeCaches []types.PurgeCache, storageInstance types.Storage) {

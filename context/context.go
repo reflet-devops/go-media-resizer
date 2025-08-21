@@ -1,7 +1,9 @@
 package context
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/reflet-devops/go-media-resizer/config"
+	appProm "github.com/reflet-devops/go-media-resizer/prometheus"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/spf13/afero"
 	"github.com/valyala/fasthttp"
@@ -22,6 +24,8 @@ type Context struct {
 	HttpClient types.Client
 
 	Config *config.Config
+
+	MetricsRegistry appProm.Registry
 }
 
 func (c *Context) GetFS() afero.Fs {
@@ -63,14 +67,15 @@ func DefaultContext() *Context {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	return &Context{
-		Logger:     slog.New(slog.NewTextHandler(os.Stdout, opts)),
-		LogLevel:   level,
-		WorkingDir: workingDir,
-		Fs:         afero.NewOsFs(),
-		done:       make(chan bool),
-		sigs:       sigs,
-		Config:     config.DefaultConfig(),
-		HttpClient: &fasthttp.Client{},
+		Logger:          slog.New(slog.NewTextHandler(os.Stdout, opts)),
+		LogLevel:        level,
+		WorkingDir:      workingDir,
+		Fs:              afero.NewOsFs(),
+		done:            make(chan bool),
+		sigs:            sigs,
+		Config:          config.DefaultConfig(),
+		HttpClient:      &fasthttp.Client{},
+		MetricsRegistry: prometheus.NewRegistry(),
 	}
 }
 
@@ -90,11 +95,12 @@ func TestContext(logBuffer io.Writer) *Context {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	return &Context{
-		Logger:   slog.New(slog.NewTextHandler(logBuffer, opts)),
-		LogLevel: level,
-		Fs:       afero.NewMemMapFs(),
-		done:     make(chan bool),
-		sigs:     sigs,
-		Config:   config.DefaultConfig(),
+		Logger:          slog.New(slog.NewTextHandler(logBuffer, opts)),
+		LogLevel:        level,
+		Fs:              afero.NewMemMapFs(),
+		done:            make(chan bool),
+		sigs:            sigs,
+		Config:          config.DefaultConfig(),
+		MetricsRegistry: prometheus.NewRegistry(),
 	}
 }

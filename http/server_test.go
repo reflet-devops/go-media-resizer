@@ -15,6 +15,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"slices"
 	"testing"
@@ -210,6 +211,22 @@ func Test_CreateServerHTTP(t *testing.T) {
 	}
 }
 
+func Test_CreateServerHTTP_MetricsEnableNoAuth_Success(t *testing.T) {
+	ctx := context.TestContext(nil)
+	ctx.Config.HTTP.Metrics.Enable = true
+	e, err := CreateServerHTTP(ctx)
+	assert.NoError(t, err)
+	assert.NotNil(t, e)
+
+	req := httptest.NewRequest(http.MethodGet, route.MetricsRoute, nil)
+	req.Host = "127.0.0.1"
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.NotEmpty(t, rec.Body.String())
+}
+
 func Test_initRouter_WithPrefix_Success(t *testing.T) {
 	ctx := context.TestContext(nil)
 
@@ -317,6 +334,66 @@ func Test_initRouter_CreateStorage_Fail(t *testing.T) {
 
 	_, err := initRouter(ctx, ctx.Config)
 	assert.Error(t, err)
+}
+
+func Test_configureMetrics(t *testing.T) {
+	username := "foo"
+	password := "bar"
+
+	tests := []struct {
+		name     string
+		username string
+		password string
+		checkFn  func(t *testing.T, rec *httptest.ResponseRecorder)
+	}{
+		{
+			name:     "successValidBasicAuth",
+			username: username,
+			password: password,
+			checkFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusOK, rec.Code)
+				assert.NotEmpty(t, rec.Body.String())
+			},
+		},
+		{
+			name:     "failedInvalidBasicAuthUsername",
+			username: "wrong",
+			password: password,
+			checkFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusUnauthorized, rec.Code)
+				assert.Equal(t, "basic realm=Restricted", rec.Header().Get("WWW-Authenticate"))
+			},
+		},
+		{
+			name:     "failedInvalidBasicAuthPassword",
+			username: username,
+			password: "wrong",
+			checkFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusUnauthorized, rec.Code)
+				assert.Equal(t, "basic realm=Restricted", rec.Header().Get("WWW-Authenticate"))
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.TestContext(nil)
+			ctx.Config.HTTP.Metrics.Enable = true
+			ctx.Config.HTTP.Metrics.BasicAuth.Username = username
+			ctx.Config.HTTP.Metrics.BasicAuth.Password = password
+
+			e := echo.New()
+			e.HideBanner = true
+			e.HidePort = true
+			req := httptest.NewRequest(http.MethodGet, route.MetricsRoute, nil)
+			req.Host = "127.0.0.1"
+			req.SetBasicAuth(tt.username, tt.password)
+			rec := httptest.NewRecorder()
+
+			configureMetrics(ctx, e)
+			e.ServeHTTP(rec, req)
+			tt.checkFn(t, rec)
+		})
+	}
 }
 
 func Test_listenFileChange_Success(t *testing.T) {
