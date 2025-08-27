@@ -16,10 +16,30 @@ import (
 	"go.uber.org/mock/gomock"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 	"unsafe"
 )
+
+func generateMinioInfoJson(path string) string {
+	return `
+{
+    "records": [
+        {
+            "EventVersion": "1",
+            "EventName": "update",
+            "s3": {
+                "Object": {
+                    "key": "` + path + `"
+                }
+            }
+        }
+    ],
+    "err": null
+}
+`
+}
 
 func Test_minio_Type(t *testing.T) {
 	storage := &minio{}
@@ -63,6 +83,190 @@ func Test_minio_getClient(t *testing.T) {
 	minioMock := mockTypes.NewMockMinioClient(ctrl)
 	storage := &minio{currentClient: minioMock}
 	assert.Equal(t, minioMock, storage.getClient())
+}
+
+func Test_minio_getCurrentBucketName(t *testing.T) {
+	want := "test"
+	m := &minio{currentBucketName: want}
+	assert.Equal(t, want, m.getCurrentBucketName())
+}
+
+func Test_minio_IsPrimaryOffline(t *testing.T) {
+	tests := []struct {
+		name  string
+		value int32
+		want  bool
+	}{
+		{
+			name:  "isOffline",
+			value: offline,
+			want:  true,
+		},
+		{
+			name:  "isOnline",
+			value: online,
+			want:  false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &minio{}
+			atomic.StoreInt32(&m.primaryOnlineStatus, tt.value)
+			assert.Equal(t, tt.want, m.IsPrimaryOffline())
+		})
+	}
+}
+
+func Test_minio_IsPrimaryOnline(t *testing.T) {
+	tests := []struct {
+		name  string
+		value int32
+		want  bool
+	}{
+		{
+			name:  "isOffline",
+			value: offline,
+			want:  false,
+		},
+		{
+			name:  "isOnline",
+			value: online,
+			want:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &minio{}
+			atomic.StoreInt32(&m.primaryOnlineStatus, tt.value)
+			assert.Equal(t, tt.want, m.IsPrimaryOnline())
+		})
+	}
+}
+
+func Test_minio_IsListenNotifyStopped(t *testing.T) {
+	tests := []struct {
+		name  string
+		value int32
+		want  bool
+	}{
+		{
+			name:  "isStopped",
+			value: stopped,
+			want:  true,
+		},
+		{
+			name:  "isRunning",
+			value: running,
+			want:  false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &minio{}
+			atomic.StoreInt32(&m.listenNotifyFileChangeStatus, tt.value)
+			assert.Equal(t, tt.want, m.IsListenNotifyStopped())
+		})
+	}
+}
+
+func Test_minio_markPrimaryOffline(t *testing.T) {
+	tests := []struct {
+		name  string
+		value int32
+		want  int32
+	}{
+		{
+			name:  "OnlineToOffline",
+			value: online,
+		},
+		{
+			name:  "OfflineToOffline",
+			value: offline,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &minio{}
+			atomic.StoreInt32(&m.primaryOnlineStatus, tt.value)
+			m.markPrimaryOffline()
+			assert.Equal(t, int32(offline), atomic.LoadInt32(&m.primaryOnlineStatus))
+		})
+	}
+}
+
+func Test_minio_markPrimaryOnline(t *testing.T) {
+	tests := []struct {
+		name  string
+		value int32
+		want  int32
+	}{
+		{
+			name:  "OfflineToOnline",
+			value: offline,
+		},
+		{
+			name:  "OnlineToOnline",
+			value: online,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &minio{}
+			atomic.StoreInt32(&m.primaryOnlineStatus, tt.value)
+			m.markPrimaryOnline()
+			assert.Equal(t, int32(online), atomic.LoadInt32(&m.primaryOnlineStatus))
+		})
+	}
+}
+
+func Test_minio_markListenNotifyStopped(t *testing.T) {
+	tests := []struct {
+		name  string
+		value int32
+		want  int32
+	}{
+		{
+			name:  "RunningToStopped",
+			value: running,
+		},
+		{
+			name:  "StoppedToStopped",
+			value: stopped,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &minio{}
+			atomic.StoreInt32(&m.listenNotifyFileChangeStatus, tt.value)
+			m.markListenNotifyStopped()
+			assert.Equal(t, int32(stopped), atomic.LoadInt32(&m.listenNotifyFileChangeStatus))
+		})
+	}
+}
+
+func Test_minio_markListenNotifyRunning(t *testing.T) {
+	tests := []struct {
+		name  string
+		value int32
+		want  int32
+	}{
+		{
+			name:  "StoppedToRunning",
+			value: stopped,
+		},
+		{
+			name:  "RunningToRunning",
+			value: running,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &minio{}
+			atomic.StoreInt32(&m.listenNotifyFileChangeStatus, tt.value)
+			m.markListenNotifyRunning()
+			assert.Equal(t, int32(running), atomic.LoadInt32(&m.listenNotifyFileChangeStatus))
+		})
+	}
 }
 
 func Test_minio_createMinioClient(t *testing.T) {
@@ -182,10 +386,11 @@ func Test_minio_GetFile(t *testing.T) {
 			defer ctrl.Finish()
 			tt.mockFn(minioMock)
 			m := &minio{
-				currentClient: minioMock,
-				primaryClient: minioMock,
-				cfg:           tt.cfg,
-				ctx:           ctx,
+				currentClient:     minioMock,
+				currentBucketName: "bucket",
+				primaryClient:     minioMock,
+				cfg:               tt.cfg,
+				ctx:               ctx,
 			}
 			_, err := m.GetFile(tt.path)
 			if !tt.wantErr(t, err, fmt.Sprintf("GetFile(%v)", tt.path)) {
@@ -218,7 +423,7 @@ func Test_createMinioStorage(t *testing.T) {
 					"use_ssl":               true,
 				},
 			},
-			want: &minio{clock: clockwork.NewRealClock(), cfg: ConfigMinio{
+			want: &minio{clock: clockwork.NewRealClock(), currentBucketName: "bucket", cfg: ConfigMinio{
 				ConfigClientMinio: ConfigClientMinio{
 					Endpoint:   "localhost",
 					BucketName: "bucket",
@@ -243,7 +448,7 @@ func Test_createMinioStorage(t *testing.T) {
 					"use_ssl":     true,
 				},
 			},
-			want: &minio{clock: clockwork.NewRealClock(), cfg: ConfigMinio{
+			want: &minio{clock: clockwork.NewRealClock(), currentBucketName: "bucket", cfg: ConfigMinio{
 				ConfigClientMinio: ConfigClientMinio{
 					Endpoint:   "localhost",
 					BucketName: "bucket",
@@ -275,7 +480,7 @@ func Test_createMinioStorage(t *testing.T) {
 					},
 				},
 			},
-			want: &minio{clock: clockwork.NewRealClock(), cfg: ConfigMinio{
+			want: &minio{clock: clockwork.NewRealClock(), primaryOnlineStatus: online, currentBucketName: "bucket", cfg: ConfigMinio{
 				ConfigClientMinio: ConfigClientMinio{
 					Endpoint:   "localhost",
 					BucketName: "bucket",
@@ -394,25 +599,10 @@ func Test_minio_startFallback(t *testing.T) {
 		{
 			name: "Success",
 			mockFn: func(primaryMock *mockTypes.MockMinioClient) {
-				primaryMock.EXPECT().HealthCheck(gomock.Any()).Return(nil, nil)
-				primaryMock.EXPECT().IsOnline().Return(true)
+				primaryMock.EXPECT().ListBuckets(gomock.Any()).Return(nil, nil)
 			},
 			testFn: func(t *testing.T, m *minio, clock *clockwork.FakeClock) {
 				assert.Truef(t, m.primaryClient == m.currentClient, "current Client must be primary")
-				_ = clock.BlockUntilContext(builtinCtx.Background(), 1)
-				clock.Advance(cfg.HealthCheckInterval)
-				time.Sleep(100 * time.Millisecond)
-				assert.Truef(t, m.primaryClient == m.currentClient, "current Client must be primary")
-			},
-		},
-		{
-			name: "FailedHealthCheck",
-			mockFn: func(primaryMock *mockTypes.MockMinioClient) {
-				primaryMock.EXPECT().HealthCheck(gomock.Any()).Return(func() {}, errors.New("health check failed"))
-				primaryMock.EXPECT().IsOnline().Return(true)
-			},
-			testFn: func(t *testing.T, m *minio, clock *clockwork.FakeClock) {
-				assert.True(t, m.primaryClient == m.currentClient, "current Client must be primary")
 				_ = clock.BlockUntilContext(builtinCtx.Background(), 1)
 				clock.Advance(cfg.HealthCheckInterval)
 				time.Sleep(100 * time.Millisecond)
@@ -422,8 +612,7 @@ func Test_minio_startFallback(t *testing.T) {
 		{
 			name: "SuccessSwitchToSecondary",
 			mockFn: func(primaryMock *mockTypes.MockMinioClient) {
-				primaryMock.EXPECT().HealthCheck(gomock.Any()).Times(1).Return(nil, nil)
-				primaryMock.EXPECT().IsOnline().Times(3).Return(false)
+				primaryMock.EXPECT().ListBuckets(gomock.Any()).Times(3).Return(nil, errors.New("502 bad gateway"))
 			},
 			testFn: func(t *testing.T, m *minio, clock *clockwork.FakeClock) {
 				assert.Truef(t, m.primaryClient == m.currentClient, "current Client must be primary")
@@ -445,10 +634,10 @@ func Test_minio_startFallback(t *testing.T) {
 			name: "SuccessWithSwitchToPrimary",
 			mockFn: func(primaryMock *mockTypes.MockMinioClient) {
 				gomock.InOrder(
-					primaryMock.EXPECT().HealthCheck(gomock.Any()).Times(1).Return(nil, nil),
-					primaryMock.EXPECT().IsOnline().Times(3).Return(false),
-					primaryMock.EXPECT().IsOnline().Times(1).Return(true),
+					primaryMock.EXPECT().ListBuckets(gomock.Any()).Times(3).Return(nil, errors.New("502 bad gateway")),
+					primaryMock.EXPECT().ListBuckets(gomock.Any()).Times(1).Return(nil, nil),
 				)
+
 			},
 			testFn: func(t *testing.T, m *minio, clock *clockwork.FakeClock) {
 				assert.Truef(t, m.primaryClient == m.currentClient, "current Client must be primary")
@@ -489,6 +678,7 @@ func Test_minio_startFallback(t *testing.T) {
 				ctx:             ctx,
 				clock:           fakeClock,
 			}
+			m.cfg.FallbackMinio = &m.cfg.ConfigClientMinio
 			go m.startFallback()
 			tt.testFn(t, m, fakeClock)
 			ctx.Cancel()
@@ -497,7 +687,7 @@ func Test_minio_startFallback(t *testing.T) {
 	}
 }
 
-func Test_minio_NotifyFileChange(t *testing.T) {
+func Test_minio_notifyFileChange(t *testing.T) {
 
 	tests := []struct {
 		name        string
@@ -543,6 +733,24 @@ func Test_minio_NotifyFileChange(t *testing.T) {
 			wantPrefix: "test/public/*",
 			want:       nil,
 		},
+		{
+			name: "SuccessWithNoErrorAndNoRecord",
+			cfg:  ConfigMinio{ConfigClientMinio: ConfigClientMinio{BucketName: "test"}, PrefixPath: "test/public"},
+			minioInfoFn: func() notification.Info {
+				return notification.Info{}
+			},
+			wantPrefix: "test/public/*",
+			want:       nil,
+		},
+		{
+			name: "SuccessWithErrorHostDown",
+			cfg:  ConfigMinio{ConfigClientMinio: ConfigClientMinio{BucketName: "test"}, PrefixPath: "test/public"},
+			minioInfoFn: func() notification.Info {
+				return notification.Info{Err: errors.New("502 bad gateway")}
+			},
+			wantPrefix: "test/public/*",
+			want:       nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -565,7 +773,7 @@ func Test_minio_NotifyFileChange(t *testing.T) {
 				cfg:           tt.cfg,
 				ctx:           ctx,
 			}
-			go m.NotifyFileChange(chanEvents)
+			go m.notifyFileChange(chanEvents)
 			time.Sleep(100 * time.Millisecond)
 			minioChan <- tt.minioInfoFn()
 
@@ -578,21 +786,109 @@ func Test_minio_NotifyFileChange(t *testing.T) {
 	}
 }
 
-func generateMinioInfoJson(path string) string {
-	return `
-{
-    "records": [
-        {
-            "EventVersion": "1",
-            "EventName": "update",
-            "s3": {
-                "Object": {
-                    "key": "` + path + `"
-                }
-            }
-        }
-    ],
-    "err": null
+func Test_minio_NotifyFileChange(t *testing.T) {
+	cfg := ConfigMinio{HealthCheckInterval: time.Millisecond * 100}
+	tests := []struct {
+		name   string
+		testFn func(t *testing.T, minioChan chan notification.Info, instance *minio, clock *clockwork.FakeClock)
+	}{
+		{
+			name: "SuccessRunningAndOnline",
+			testFn: func(t *testing.T, minioChan chan notification.Info, instance *minio, clock *clockwork.FakeClock) {
+				_ = clock.BlockUntilContext(builtinCtx.Background(), 1)
+				clock.Advance(cfg.HealthCheckInterval)
+				time.Sleep(100 * time.Millisecond)
+				assert.Equal(t, int32(running), atomic.LoadInt32(&instance.listenNotifyFileChangeStatus))
+			},
+		},
+		{
+			name: "SuccessRunningAndOffline",
+			testFn: func(t *testing.T, minioChan chan notification.Info, instance *minio, clock *clockwork.FakeClock) {
+				instance.markPrimaryOffline()
+				_ = clock.BlockUntilContext(builtinCtx.Background(), 1)
+				clock.Advance(cfg.HealthCheckInterval)
+				time.Sleep(100 * time.Millisecond)
+				assert.Equal(t, int32(running), atomic.LoadInt32(&instance.listenNotifyFileChangeStatus))
+			},
+		},
+		{
+			name: "SuccessStoppedAndOffline",
+			testFn: func(t *testing.T, minioChan chan notification.Info, instance *minio, clock *clockwork.FakeClock) {
+				instance.markPrimaryOffline()
+				minioChan <- notification.Info{Err: errors.New("502 bad gateway")}
+				_ = clock.BlockUntilContext(builtinCtx.Background(), 1)
+				clock.Advance(cfg.HealthCheckInterval)
+				time.Sleep(100 * time.Millisecond)
+				assert.Equal(t, int32(stopped), atomic.LoadInt32(&instance.listenNotifyFileChangeStatus))
+			},
+		},
+		{
+			name: "SuccessStoppedAndOnline",
+			testFn: func(t *testing.T, minioChan chan notification.Info, instance *minio, clock *clockwork.FakeClock) {
+				minioChan <- notification.Info{Err: errors.New("502 bad gateway")}
+				instance.markPrimaryOnline()
+				_ = clock.BlockUntilContext(builtinCtx.Background(), 1)
+				clock.Advance(cfg.HealthCheckInterval)
+				time.Sleep(100 * time.Millisecond)
+				assert.Equal(t, int32(running), atomic.LoadInt32(&instance.listenNotifyFileChangeStatus))
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.TestContext(nil)
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			minioChan := make(chan notification.Info)
+			chanEvents := make(chan types.Events, 1)
+			primaryMinioMock := mockTypes.NewMockMinioClient(ctrl)
+			primaryMinioMock.EXPECT().ListenBucketNotification(
+				gomock.Any(),
+				gomock.Any(),
+				gomock.Any(),
+				gomock.Any(),
+				gomock.Any(),
+			).AnyTimes().Return(minioChan)
+			fakeClock := clockwork.NewFakeClock()
+			m := &minio{primaryClient: primaryMinioMock, ctx: ctx, clock: fakeClock, cfg: cfg}
+			go m.NotifyFileChange(chanEvents)
+			tt.testFn(t, minioChan, m, fakeClock)
+			ctx.Cancel()
+		})
+	}
 }
-`
+
+func TestIsNetworkOrHostDown(t *testing.T) {
+
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "NoError",
+			err:  nil,
+			want: false,
+		},
+		{
+			name: "Error503",
+			err:  errors.New("503 service unavailable"),
+			want: true,
+		},
+		{
+			name: "Error502",
+			err:  errors.New("502 bad gateway"),
+			want: true,
+		},
+		{
+			name: "Error401",
+			err:  errors.New("401 unauthorized"),
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, IsNetworkOrHostDown(tt.err), "IsNetworkOrHostDown(%v)", tt.err)
+		})
+	}
 }
