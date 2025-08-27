@@ -196,7 +196,6 @@ func Test_minio_GetFile(t *testing.T) {
 }
 
 func Test_createMinioStorage(t *testing.T) {
-	ctx := context.TestContext(nil)
 
 	tests := []struct {
 		name        string
@@ -219,7 +218,7 @@ func Test_createMinioStorage(t *testing.T) {
 					"use_ssl":               true,
 				},
 			},
-			want: &minio{ctx: ctx, clock: clockwork.NewRealClock(), cfg: ConfigMinio{
+			want: &minio{clock: clockwork.NewRealClock(), cfg: ConfigMinio{
 				ConfigClientMinio: ConfigClientMinio{
 					Endpoint:   "localhost",
 					BucketName: "bucket",
@@ -244,7 +243,7 @@ func Test_createMinioStorage(t *testing.T) {
 					"use_ssl":     true,
 				},
 			},
-			want: &minio{ctx: ctx, clock: clockwork.NewRealClock(), cfg: ConfigMinio{
+			want: &minio{clock: clockwork.NewRealClock(), cfg: ConfigMinio{
 				ConfigClientMinio: ConfigClientMinio{
 					Endpoint:   "localhost",
 					BucketName: "bucket",
@@ -276,7 +275,7 @@ func Test_createMinioStorage(t *testing.T) {
 					},
 				},
 			},
-			want: &minio{ctx: ctx, clock: clockwork.NewRealClock(), cfg: ConfigMinio{
+			want: &minio{clock: clockwork.NewRealClock(), cfg: ConfigMinio{
 				ConfigClientMinio: ConfigClientMinio{
 					Endpoint:   "localhost",
 					BucketName: "bucket",
@@ -359,8 +358,9 @@ func Test_createMinioStorage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.TestContext(nil)
 			got, err := createMinioStorage(ctx, tt.cfg)
-
+			time.Sleep(time.Millisecond * 100)
 			if tt.wantErr {
 				assert.Nil(t, got)
 				assert.Error(t, err)
@@ -376,6 +376,7 @@ func Test_createMinioStorage(t *testing.T) {
 				assert.IsType(t, &libMinio.Client{}, gotMinio.primaryClient)
 				gotMinio.currentClient = nil
 				gotMinio.primaryClient = nil
+				gotMinio.ctx = nil
 				assert.NoError(t, err)
 				assert.Equal(t, tt.want, gotMinio)
 			}
@@ -384,7 +385,6 @@ func Test_createMinioStorage(t *testing.T) {
 }
 
 func Test_minio_startFallback(t *testing.T) {
-	ctx := context.TestContext(nil)
 	cfg := ConfigMinio{HealthCheckInterval: time.Millisecond * 100}
 	tests := []struct {
 		name   string
@@ -474,6 +474,7 @@ func Test_minio_startFallback(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.TestContext(nil)
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			primaryMinioMock := mockTypes.NewMockMinioClient(ctrl)
@@ -497,7 +498,6 @@ func Test_minio_startFallback(t *testing.T) {
 }
 
 func Test_minio_NotifyFileChange(t *testing.T) {
-	ctx := context.TestContext(nil)
 
 	tests := []struct {
 		name        string
@@ -546,6 +546,7 @@ func Test_minio_NotifyFileChange(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.TestContext(nil)
 			minioChan := make(chan notification.Info)
 			chanEvents := make(chan types.Events, 1)
 			ctrl := gomock.NewController(t)

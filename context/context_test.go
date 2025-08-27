@@ -97,9 +97,11 @@ func TestContext_Cancel(t *testing.T) {
 		select {
 		case <-ctx.done:
 			running = false
+			return
 		}
 	}()
 	ctx.Cancel()
+	time.Sleep(time.Millisecond * 100)
 	assert.Equal(t, false, running)
 }
 
@@ -111,9 +113,11 @@ func TestContext_Done(t *testing.T) {
 		select {
 		case <-ctx.Done():
 			running = false
+			return
 		}
 	}()
-	ctx.done <- true
+	close(ctx.done)
+	time.Sleep(time.Millisecond * 100)
 	assert.Equal(t, false, running)
 }
 

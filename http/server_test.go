@@ -414,6 +414,7 @@ func Test_listenFileChange_Success(t *testing.T) {
 	listenFileChange(ctx, chanEvents, purgeCaches, storageMock)
 	time.Sleep(100 * time.Millisecond)
 	chanEvents <- events
+	time.Sleep(time.Millisecond * 200)
 	ctx.Cancel()
 }
 

@@ -44,7 +44,7 @@ func (c *Context) GetWorkingDir() string {
 }
 
 func (c *Context) Cancel() {
-	c.done <- true
+	close(c.done)
 }
 
 func (c *Context) Done() <-chan bool {
