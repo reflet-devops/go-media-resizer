@@ -19,7 +19,7 @@ func ConfigureAccessLogMiddleware(e *echo.Echo, ctx *context.Context) error {
 		return fmt.Errorf("error creating rotate logger: %v", err)
 	}
 
-	sloger := slog.New(slog.NewTextHandler(lw, &slog.HandlerOptions{AddSource: false, Level: slog.LevelInfo}))
+	slogger := slog.New(slog.NewTextHandler(lw, &slog.HandlerOptions{AddSource: false, Level: slog.LevelInfo}))
 	e.Use(echoMiddleware.RequestLoggerWithConfig(echoMiddleware.RequestLoggerConfig{
 		LogStatus:        true,
 		LogURI:           true,
@@ -40,7 +40,7 @@ func ConfigureAccessLogMiddleware(e *echo.Echo, ctx *context.Context) error {
 			if v.Error == nil {
 				xForwardedFor := c.Request().Header.Get("X-Forwarded-For")
 
-				sloger.LogAttrs(builtCtx.Background(), slog.LevelInfo, "REQUEST",
+				slogger.LogAttrs(builtCtx.Background(), slog.LevelInfo, "REQUEST",
 					slog.String(logger.RemoteIPKey, urltools.RemovePortNumber(c.Request().RemoteAddr)),
 					slog.String(logger.RealIPKey, c.RealIP()),
 					slog.String(logger.HostKey, v.Host),
@@ -55,7 +55,7 @@ func ConfigureAccessLogMiddleware(e *echo.Echo, ctx *context.Context) error {
 					slog.String(logger.LatencyKey, v.Latency.String()),
 				)
 			} else {
-				sloger.LogAttrs(builtCtx.Background(), slog.LevelError, "REQUEST_ERROR",
+				slogger.LogAttrs(builtCtx.Background(), slog.LevelError, "REQUEST_ERROR",
 					slog.String(logger.RemoteIPKey, urltools.RemovePortNumber(c.Request().RemoteAddr)),
 					slog.String(logger.HostKey, v.Host),
 					slog.String(logger.RealIPKey, c.RealIP()),

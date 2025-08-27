@@ -28,14 +28,14 @@ func GetStartRunFn(ctx *context.Context) func(*cobra.Command, []string) error {
 		}
 
 		httpConfig := ctx.Config.HTTP
-
 		go func() {
 			for {
 				select {
 				case sig := <-ctx.Signal():
 					ctx.Logger.Info(fmt.Sprintf("%s signal received, exiting...", sig.String()))
-					_ = e.Shutdown(stdContext.Background())
 					ctx.Cancel()
+					ctx.Logger.Info(fmt.Sprintf("gracefull shutdown completed"))
+					_ = e.Shutdown(stdContext.Background())
 				}
 			}
 		}()
@@ -70,10 +70,16 @@ func managePidFile(ctx *context.Context, pidFile string) error {
 	}
 
 	go func() {
-		<-ctx.Done()
-		err := removePidFIle(ctx, pidFile)
-		if err != nil {
-			ctx.Logger.Error(fmt.Sprintf("failed to remove pid file: %v", err))
+		for {
+			select {
+			case <-ctx.Done():
+				ctx.Logger.Info(fmt.Sprintf("remove pid file: %s", pidFile))
+				err := removePidFIle(ctx, pidFile)
+				if err != nil {
+					ctx.Logger.Error(fmt.Sprintf("failed to remove pid file: %v", err))
+				}
+				return
+			}
 		}
 	}()
 
