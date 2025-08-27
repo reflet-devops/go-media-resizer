@@ -227,7 +227,7 @@ func Test_createMinioStorage(t *testing.T) {
 					UseSSL:     true,
 				},
 				HealthCheckInterval: time.Second * 2,
-				PrefixPath:          "/app",
+				PrefixPath:          "app",
 			}},
 		},
 		{
@@ -252,7 +252,7 @@ func Test_createMinioStorage(t *testing.T) {
 					UseSSL:     true,
 				},
 				HealthCheckInterval: time.Second * 5,
-				PrefixPath:          "/app",
+				PrefixPath:          "app",
 			}},
 		},
 		{
@@ -291,7 +291,7 @@ func Test_createMinioStorage(t *testing.T) {
 					UseSSL:     true,
 				},
 				HealthCheckInterval: time.Second * 5,
-				PrefixPath:          "/app",
+				PrefixPath:          "app",
 			}},
 		},
 		{

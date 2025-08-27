@@ -6,6 +6,7 @@ import (
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"github.com/reflet-devops/go-media-resizer/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/types"
+	"strings"
 )
 
 func ParseOption(endpoint *config.Endpoint, projectCfg *config.Project, path string) (*types.ResizeOption, error) {
@@ -41,6 +42,7 @@ func ParseOption(endpoint *config.Endpoint, projectCfg *config.Project, path str
 	opts := endpoint.DefaultResizeOpts
 	opts.OriginFormat = originType
 	opts.Headers = projectCfg.Headers
+	opts.Source = strings.Trim(opts.Source, "/")
 
 	err := mapstructure.Decode(params, &opts)
 

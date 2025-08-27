@@ -181,7 +181,7 @@ func createMinioStorage(ctx *context.Context, cfg config.StorageConfig) (types.S
 		return nil, err
 	}
 
-	instanceConfig.PrefixPath = strings.TrimRight(instanceConfig.PrefixPath, "/")
+	instanceConfig.PrefixPath = strings.Trim(instanceConfig.PrefixPath, "/")
 
 	minioClient, errNewClient := createMinioClient(instanceConfig.ConfigClientMinio)
 	if errNewClient != nil {

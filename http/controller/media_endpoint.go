@@ -15,7 +15,7 @@ func GetMedia(ctx *context.Context, project *config.Project, storage types.Stora
 	return func(c echo.Context) error {
 		ctx = prepareContext(ctx, c)
 
-		requestPath := strings.Replace(c.Request().RequestURI, project.PrefixPath, "", 1)
+		requestPath := strings.Replace(c.Request().RequestURI, fmt.Sprintf("/%s", project.PrefixPath), "", 1)
 		for _, endpoint := range project.Endpoints {
 			opts, errMatch := parser.ParseOption(&endpoint, project, requestPath)
 			if errMatch != nil {
