@@ -38,7 +38,10 @@ func (f fs) Type() string {
 func (f fs) NotifyFileChange(_ chan types.Events) {}
 
 func (f fs) GetFile(path string) (io.Reader, error) {
-	return f.fs.Open(filepath.Join(f.cfg.PrefixPath, path))
+	if f.cfg.PrefixPath != "" {
+		path = filepath.Join(f.cfg.PrefixPath, path)
+	}
+	return f.fs.Open(path)
 }
 
 func createFsStorage(ctx *context.Context, cfg config.StorageConfig) (types.Storage, error) {

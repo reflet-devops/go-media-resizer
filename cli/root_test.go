@@ -128,6 +128,10 @@ func Test_prepareProject_Success(t *testing.T) {
 				},
 			},
 			{
+				ID:         "prefix-path",
+				PrefixPath: "/prefix/",
+			},
+			{
 				ID:                   "regex-test",
 				ExtraAcceptTypeFiles: []string{types.TypePNG},
 				Endpoints: []config.Endpoint{
@@ -173,6 +177,14 @@ func Test_prepareProject_Success(t *testing.T) {
 			ExtraHeaders: types.Headers{
 				"X-Extra": "foo",
 			},
+		},
+		{
+			ID:              "prefix-path",
+			AcceptTypeFiles: []string{".1", ".3"},
+			Headers: types.Headers{
+				"X-Custom": "foo",
+			},
+			PrefixPath: "prefix",
 		},
 		{
 			ID:                   "regex-test",

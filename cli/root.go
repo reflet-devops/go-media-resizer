@@ -172,7 +172,7 @@ func prepareProject(ctx *context.Context) error {
 			}
 			project.Endpoints[j] = endpoint
 		}
-		project.PrefixPath = strings.TrimRight(project.PrefixPath, "/")
+		project.PrefixPath = strings.Trim(project.PrefixPath, "/")
 
 		if project.Headers == nil {
 			project.Headers = types.Headers{}

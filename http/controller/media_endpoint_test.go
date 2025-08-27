@@ -48,7 +48,7 @@ func Test_GetMedia(t *testing.T) {
 			},
 			mockFn: func(mockStorage *mockTypes.MockStorage) {
 				b := bytes.NewBufferString("hello world")
-				mockStorage.EXPECT().GetFile(gomock.Eq("/resource.txt")).Times(1).Return(b, nil)
+				mockStorage.EXPECT().GetFile(gomock.Eq("resource.txt")).Times(1).Return(b, nil)
 			},
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusOK, rec.Code)
@@ -124,7 +124,7 @@ func Test_GetMedia(t *testing.T) {
 				},
 			},
 			mockFn: func(mockStorage *mockTypes.MockStorage) {
-				mockStorage.EXPECT().GetFile(gomock.Eq("/resource.txt")).Times(1).Return(nil, errors.New("file not found"))
+				mockStorage.EXPECT().GetFile(gomock.Eq("resource.txt")).Times(1).Return(nil, errors.New("file not found"))
 			},
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusNotFound, rec.Code)
