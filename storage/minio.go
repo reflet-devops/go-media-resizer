@@ -14,10 +14,17 @@ import (
 	"github.com/reflet-devops/go-media-resizer/types"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
+)
+
+const (
+	offline = 1
+	online  = 2
+	running = 3
+	stopped = 4
 )
 
 const (
@@ -47,7 +54,12 @@ type ConfigClientMinio struct {
 }
 
 type minio struct {
-	currentClient   types.MinioClient
+	currentClient     types.MinioClient
+	currentBucketName string
+
+	primaryOnlineStatus          int32
+	listenNotifyFileChangeStatus int32
+
 	primaryClient   types.MinioClient
 	secondaryClient types.MinioClient
 	cfg             ConfigMinio
@@ -70,8 +82,7 @@ func (m *minio) getFullPath(path string) string {
 }
 
 func (m *minio) GetFile(path string) (io.Reader, error) {
-	object, err := m.getClient().GetObject(builtinCtx.Background(), m.cfg.BucketName, filepath.Join(m.cfg.PrefixPath, path), libMinio.GetObjectOptions{})
-
+	object, err := m.getClient().GetObject(builtinCtx.Background(), m.getCurrentBucketName(), m.getFullPath(path), libMinio.GetObjectOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +96,7 @@ func (m *minio) GetFile(path string) (io.Reader, error) {
 		return nil, os.ErrNotExist
 	}
 
-	return object, err
+	return object, nil
 }
 
 func (m *minio) getClient() types.MinioClient {
@@ -94,32 +105,74 @@ func (m *minio) getClient() types.MinioClient {
 	return m.currentClient
 }
 
+func (m *minio) getCurrentBucketName() string {
+	m.mx.RLock()
+	defer m.mx.RUnlock()
+	return m.currentBucketName
+}
+
+func (m *minio) IsPrimaryOffline() bool {
+	return atomic.LoadInt32(&m.primaryOnlineStatus) == offline
+}
+
+func (m *minio) IsPrimaryOnline() bool {
+	return !m.IsPrimaryOffline()
+}
+
+func (m *minio) markPrimaryOffline() {
+	atomic.StoreInt32(&m.primaryOnlineStatus, offline)
+}
+
+func (m *minio) markPrimaryOnline() {
+	atomic.StoreInt32(&m.primaryOnlineStatus, online)
+}
+
+func (m *minio) IsListenNotifyStopped() bool {
+	return atomic.LoadInt32(&m.listenNotifyFileChangeStatus) == stopped
+}
+
+func (m *minio) markListenNotifyStopped() {
+	atomic.StoreInt32(&m.listenNotifyFileChangeStatus, stopped)
+}
+
+func (m *minio) markListenNotifyRunning() {
+	atomic.StoreInt32(&m.listenNotifyFileChangeStatus, running)
+}
+
 func (m *minio) startFallback() {
-	cancel, errHc := m.primaryClient.HealthCheck(time.Second * 2)
-	if errHc != nil {
-		defer cancel()
-	}
+
+	m.markPrimaryOnline()
 	failedCount := 0
 	ticker := m.clock.NewTicker(m.cfg.HealthCheckInterval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.Chan():
-			if m.primaryClient.IsOnline() {
+			_, err := m.primaryClient.ListBuckets(builtinCtx.Background())
+			if IsNetworkOrHostDown(err) {
+				m.markPrimaryOffline()
+			} else {
+				m.markPrimaryOnline()
+			}
+
+			if m.IsPrimaryOnline() {
 				failedCount = 0
+
 				if m.currentClient != m.primaryClient {
 					m.ctx.Logger.Info(fmt.Sprintf("use minio primary as currentClient %s/%s", m.cfg.Endpoint, m.cfg.BucketName))
 					m.mx.Lock()
 					m.currentClient = m.primaryClient
+					m.currentBucketName = m.cfg.BucketName
 					m.mx.Unlock()
 				}
 			} else {
 				failedCount++
 				m.ctx.Logger.Error(fmt.Sprintf("primary minio is offline %s/%s", m.cfg.Endpoint, m.cfg.BucketName))
 				if m.currentClient != m.secondaryClient && failedCount >= 3 {
-					m.ctx.Logger.Error(fmt.Sprintf("use minio secondary as currentClient %s/%s", m.cfg.Endpoint, m.cfg.BucketName))
+					m.ctx.Logger.Error(fmt.Sprintf("use minio secondary as currentClient %s/%s", m.cfg.FallbackMinio.Endpoint, m.cfg.FallbackMinio.BucketName))
 					m.mx.Lock()
 					m.currentClient = m.secondaryClient
+					m.currentBucketName = m.cfg.FallbackMinio.BucketName
 					m.mx.Unlock()
 				}
 			}
@@ -130,11 +183,33 @@ func (m *minio) startFallback() {
 }
 
 func (m *minio) NotifyFileChange(chanEvent chan types.Events) {
+	run := func() {
+		go m.notifyFileChange(chanEvent)
+	}
+	run()
+	ticker := m.clock.NewTicker(m.cfg.HealthCheckInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.Chan():
+			if m.IsListenNotifyStopped() && m.IsPrimaryOnline() {
+				m.ctx.Logger.Debug(fmt.Sprintf("restart listner file change"))
+				run()
+			}
+		case <-m.ctx.Done():
+			return
+
+		}
+	}
+}
+
+func (m *minio) notifyFileChange(chanEvent chan types.Events) {
 	eventsTypes := []string{
 		string(notification.ObjectCreatedPut),
 		string(notification.ObjectCreatedPost),
 		string(notification.ObjectCreatedCopy),
 		string(notification.ObjectRemovedDelete),
+		string(notification.ObjectRemovedDeleteMarkerCreated),
 	}
 	minioChanEvent := m.primaryClient.ListenBucketNotification(
 		builtinCtx.Background(),
@@ -143,11 +218,21 @@ func (m *minio) NotifyFileChange(chanEvent chan types.Events) {
 		"",
 		eventsTypes,
 	)
+	m.markListenNotifyRunning()
+	defer func() {
+		m.markListenNotifyStopped()
+	}()
 	for {
 		select {
 		case minioEvent := <-minioChanEvent:
 			if minioEvent.Err != nil {
 				m.ctx.Logger.Error(fmt.Sprintf("minio notify failed: %v", minioEvent.Err))
+				if IsNetworkOrHostDown(minioEvent.Err) {
+					return
+				}
+				continue
+			}
+			if minioEvent.Records == nil {
 				continue
 			}
 			events := types.Events{}
@@ -188,8 +273,7 @@ func createMinioStorage(ctx *context.Context, cfg config.StorageConfig) (types.S
 		return nil, errNewClient
 	}
 
-	instance := &minio{currentClient: minioClient, primaryClient: minioClient, cfg: instanceConfig, ctx: ctx, clock: clockwork.NewRealClock()}
-
+	instance := &minio{currentClient: minioClient, currentBucketName: instanceConfig.BucketName, primaryClient: minioClient, cfg: instanceConfig, ctx: ctx, clock: clockwork.NewRealClock()}
 	if instanceConfig.FallbackMinio != nil {
 		minioClient2, errNewClient2 := createMinioClient(*instanceConfig.FallbackMinio)
 		if errNewClient2 != nil {
@@ -211,4 +295,18 @@ func createMinioClient(cfg ConfigClientMinio) (*libMinio.Client, error) {
 			BucketLookup: libMinio.BucketLookupAuto,
 		},
 	)
+}
+
+func IsNetworkOrHostDown(err error) bool {
+	if err == nil {
+		return false
+	}
+	if libMinio.IsNetworkOrHostDown(err, false) {
+		return true
+	}
+	if strings.Contains(strings.ToLower(err.Error()), "502 bad gateway") {
+		return true
+	}
+
+	return false
 }
