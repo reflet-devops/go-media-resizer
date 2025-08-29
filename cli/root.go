@@ -208,7 +208,7 @@ func validRegexTest(project config.Project, endpoint config.Endpoint) error {
 		if opts == nil {
 			return fmt.Errorf("fail to validate RegexTest %s path not match", test.Path)
 		}
-
+		opts.Headers = nil
 		if !reflect.DeepEqual(opts, &test.ResultOpts) {
 			return fmt.Errorf("fail to validate RegexTest %s excepted: %v, actual: %v", test.Path, &test.ResultOpts, opts)
 		}

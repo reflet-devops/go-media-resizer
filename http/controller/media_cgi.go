@@ -9,6 +9,7 @@ import (
 	"github.com/reflet-devops/go-media-resizer/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/valyala/fasthttp"
+	"io"
 	buildinHttp "net/http"
 	"strings"
 )
@@ -17,7 +18,9 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 	return func(c echo.Context) error {
 		ctx = prepareContext(ctx, c)
 		source := c.Param("source")
-		opts := &types.ResizeOption{Source: source, Headers: types.Headers{}}
+		opts := ctx.Config.ResizeCGI.DefaultResizeOpts
+		opts.Source = source
+		opts.Headers = types.Headers{}
 
 		fileExtension := urltools.GetExtension(source)
 		fileType := types.GetType(fileExtension)
@@ -28,29 +31,26 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 		fileTypeIsValid := types.ValidateType(fileType, ctx.Config.AcceptTypeFiles)
 		if !fileTypeIsValid {
 			ctx.Logger.Error(fmt.Sprintf("GetMediaCGI: file type not accepted: %s", source))
-			return c.JSON(buildinHttp.StatusInternalServerError, "file type not accepted")
+			return c.String(buildinHttp.StatusInternalServerError, "file type not accepted")
 		}
 
-		err := mapstructure.Decode(optMap, opts)
+		err := mapstructure.Decode(optMap, &opts)
 		if err != nil {
-			return c.JSON(buildinHttp.StatusInternalServerError, err.Error())
-		}
-		if opts.Format == "" {
-			opts.Format = opts.OriginFormat
+			return c.String(buildinHttp.StatusInternalServerError, err.Error())
 		}
 
 		resource, err := fetchCGIResource(ctx, source)
 		if err != nil {
-			return c.JSON(buildinHttp.StatusInternalServerError, err.Error())
+			return c.String(buildinHttp.StatusInternalServerError, err.Error())
 		}
-		buffer := bytes.NewBuffer(resource)
+		buffer := io.NopCloser(bytes.NewBuffer(resource))
 
 		opts.AddTag(types.GetTagSourcePathHash(urltools.GetUri(opts.Source)))
 
 		for k, v := range ctx.Config.Headers {
 			opts.Headers[k] = v
 		}
-		return SendStream(ctx, c, opts, buffer)
+		return SendStream(ctx, c, &opts, buffer)
 	}
 }
 

@@ -81,7 +81,7 @@ func (m *minio) getFullPath(path string) string {
 	return strings.Join([]string{m.cfg.PrefixPath, path}, "/")
 }
 
-func (m *minio) GetFile(path string) (io.Reader, error) {
+func (m *minio) GetFile(path string) (io.ReadCloser, error) {
 	object, err := m.getClient().GetObject(builtinCtx.Background(), m.getCurrentBucketName(), m.getFullPath(path), libMinio.GetObjectOptions{})
 	if err != nil {
 		return nil, err

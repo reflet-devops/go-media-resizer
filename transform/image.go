@@ -3,8 +3,8 @@ package transform
 import (
 	"bytes"
 	"fmt"
-	"github.com/Kagami/go-avif"
 	"github.com/disintegration/imaging"
+	"github.com/gen2brain/avif"
 	"github.com/kolesa-team/go-webp/webp"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"image"
@@ -15,10 +15,13 @@ import (
 	"slices"
 )
 
-func Transform(file io.Reader, opts *types.ResizeOption) (io.Reader, error) {
+func Transform(file io.ReadCloser, opts *types.ResizeOption) (io.ReadCloser, error) {
 	if !opts.NeedTransform() {
 		return file, nil
 	}
+	defer func() {
+		_ = file.Close()
+	}()
 
 	img, _, errDecode := image.Decode(file)
 	if errDecode != nil {
@@ -40,7 +43,6 @@ func Transform(file io.Reader, opts *types.ResizeOption) (io.Reader, error) {
 	if errFormat != nil {
 		return nil, fmt.Errorf("failed to format image %s: %w", opts.Source, errFormat)
 	}
-
 	return imgFormated, nil
 }
 
@@ -66,13 +68,13 @@ func Adjust(img image.Image, opts *types.ResizeOption) image.Image {
 	return img
 }
 
-func Format(img image.Image, opts *types.ResizeOption) (io.Reader, error) {
+func Format(img image.Image, opts *types.ResizeOption) (io.ReadCloser, error) {
 	var errFormat error
 	w := &bytes.Buffer{}
 
 	if slices.Contains([]string{types.TypeAVIF, types.TypeWEBP}, opts.Format) {
 		if opts.Format == types.TypeAVIF {
-			errFormat = avif.Encode(w, img, &avif.Options{Speed: 8, Quality: 60})
+			errFormat = avif.Encode(w, img, avif.Options{Speed: avif.DefaultSpeed, Quality: avif.DefaultQuality})
 		} else if opts.Format == types.TypeWEBP {
 			errFormat = webp.Encode(w, img, nil)
 		}
@@ -93,5 +95,5 @@ func Format(img image.Image, opts *types.ResizeOption) (io.Reader, error) {
 		return nil, fmt.Errorf("unsupported format: %s", opts.Format)
 	}
 
-	return w, errFormat
+	return io.NopCloser(w), errFormat
 }

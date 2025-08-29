@@ -5,8 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/Kagami/go-avif"
 	"github.com/disintegration/imaging"
+	"github.com/gen2brain/avif"
 	"github.com/kolesa-team/go-webp/webp"
 	"github.com/reflet-devops/go-media-resizer/hash"
 	"github.com/reflet-devops/go-media-resizer/types"
@@ -131,7 +131,7 @@ func TestFormat(t *testing.T) {
 
 				img, _, err := image.Decode(file)
 				assert.NoError(t, err)
-				err = avif.Encode(w, img, &avif.Options{Speed: 8, Quality: 60})
+				err = avif.Encode(w, img, avif.Options{Speed: 10, Quality: 60})
 				assert.NoError(t, err)
 
 				shaSum, err := hash.GenerateSHA256(w)
@@ -233,7 +233,7 @@ func TestTransform(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		file    io.Reader
+		file    io.ReadCloser
 		opts    *types.ResizeOption
 		wantFn  func() string
 		wantErr assert.ErrorAssertionFunc
@@ -241,7 +241,7 @@ func TestTransform(t *testing.T) {
 		{
 			name:    "successNothingToDo",
 			opts:    &types.ResizeOption{Format: types.TypeText, OriginFormat: types.TypeText},
-			file:    strings.NewReader("unknown"),
+			file:    io.NopCloser(strings.NewReader("unknown")),
 			wantFn:  func() string { return "b23a6a8439c0dde5515893e7c90c1e3233b8616e634470f20dc4928bcf3609bc" },
 			wantErr: assert.NoError,
 		},
@@ -264,7 +264,7 @@ func TestTransform(t *testing.T) {
 		},
 		{
 			name:    "failedToDecode",
-			file:    strings.NewReader("unknown"),
+			file:    io.NopCloser(strings.NewReader("unknown")),
 			opts:    &types.ResizeOption{Format: types.TypeJPEG, OriginFormat: types.TypeJPEG, Width: 100},
 			wantErr: assert.Error,
 		},
@@ -277,7 +277,7 @@ func TestTransform(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var errOpen error
-			var file io.Reader
+			var file io.ReadCloser
 			file, errOpen = os.Open(path)
 			assert.NoError(t, errOpen)
 			if tt.file != nil {

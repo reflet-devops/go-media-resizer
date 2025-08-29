@@ -11,6 +11,7 @@ import (
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -47,7 +48,7 @@ func Test_GetMedia(t *testing.T) {
 				},
 			},
 			mockFn: func(mockStorage *mockTypes.MockStorage) {
-				b := bytes.NewBufferString("hello world")
+				b := io.NopCloser(bytes.NewBufferString("hello world"))
 				mockStorage.EXPECT().GetFile(gomock.Eq("resource.txt")).Times(1).Return(b, nil)
 			},
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {

@@ -41,9 +41,17 @@ func DetectFormatFromHeaderAccept(acceptHeaderValue string, opts *types.ResizeOp
 	opts.Format = opts.OriginFormat
 }
 
-func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, content io.Reader) error {
+func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, content io.ReadCloser) error {
+	defer func() {
+		if content != nil {
+			_ = content.Close()
+			content = nil
+
+		}
+	}()
 	vary := []string{echo.HeaderAccept}
-	DetectFormatFromHeaderAccept(c.Request().Header.Get(echo.HeaderAccept), opts)
+	acceptHeaderValue := c.Request().Header.Get(echo.HeaderAccept)
+	DetectFormatFromHeaderAccept(acceptHeaderValue, opts)
 
 	if opts.NeedTransform() {
 		var errTransform error

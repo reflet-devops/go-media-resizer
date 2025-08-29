@@ -29,6 +29,10 @@ func (e *errorReader) Read(p []byte) (n int, err error) {
 	return
 }
 
+func (e *errorReader) Close() error {
+	return nil
+}
+
 func TestDetectFormatFromHeaderAccept(t *testing.T) {
 
 	tests := []struct {
@@ -107,7 +111,7 @@ func TestSendStream(t *testing.T) {
 		name         string
 		opts         *types.ResizeOption
 		headerAccept string
-		contentFn    func() io.Reader
+		contentFn    func() io.ReadCloser
 
 		wantErr assert.ErrorAssertionFunc
 		wantFn  func(t *testing.T, rec *httptest.ResponseRecorder)
@@ -116,8 +120,8 @@ func TestSendStream(t *testing.T) {
 			name:         "successWithPlainText",
 			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypeText, Source: "/text.txt", Headers: types.Headers{"X-Custom": "foo"}, Tags: []string{"tag1"}},
 			headerAccept: "text/plain",
-			contentFn: func() io.Reader {
-				return bytes.NewReader([]byte("hello"))
+			contentFn: func() io.ReadCloser {
+				return io.NopCloser(bytes.NewReader([]byte("hello")))
 			},
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusOK, rec.Code)
@@ -131,7 +135,7 @@ func TestSendStream(t *testing.T) {
 			name:         "successWithResizeFormat",
 			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/paysage.png", Headers: types.Headers{"X-Custom": "foo"}, Width: 500},
 			headerAccept: "image/avif,image/webp,image/png",
-			contentFn: func() io.Reader {
+			contentFn: func() io.ReadCloser {
 				file, errOpen := os.Open("../../fixtures/paysage.png")
 				assert.NoError(t, errOpen)
 				return file
@@ -148,7 +152,7 @@ func TestSendStream(t *testing.T) {
 			name:         "failedTransform",
 			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/paysage.png", Width: 500},
 			headerAccept: "image/avif,image/webp,image/png",
-			contentFn: func() io.Reader {
+			contentFn: func() io.ReadCloser {
 				return &errorReader{r: bytes.NewBufferString("")}
 			},
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
@@ -162,8 +166,8 @@ func TestSendStream(t *testing.T) {
 			name:         "failedReadData",
 			opts:         &types.ResizeOption{Format: types.TypePNG, OriginFormat: types.TypePNG, Source: "/paysage.png"},
 			headerAccept: "image/avif,image/webp,image/png",
-			contentFn: func() io.Reader {
-				return &errorReader{r: bytes.NewBufferString("")}
+			contentFn: func() io.ReadCloser {
+				return &errorReader{r: io.NopCloser(bytes.NewBufferString(""))}
 			},
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusInternalServerError, rec.Code)
