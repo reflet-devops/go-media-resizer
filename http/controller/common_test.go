@@ -3,35 +3,17 @@ package controller
 import (
 	"bytes"
 	"fmt"
-	"github.com/labstack/echo/v4"
-	"github.com/reflet-devops/go-media-resizer/context"
-	"github.com/reflet-devops/go-media-resizer/types"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/labstack/echo/v4"
+	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/types"
+	"github.com/stretchr/testify/assert"
 )
-
-type errorReader struct {
-	r     io.Reader
-	limit int
-	count int
-}
-
-func (e *errorReader) Read(p []byte) (n int, err error) {
-	if e.count >= e.limit {
-		return 0, fmt.Errorf("simulated read error")
-	}
-	n, err = e.r.Read(p)
-	e.count += n
-	return
-}
-
-func (e *errorReader) Close() error {
-	return nil
-}
 
 func TestDetectFormatFromHeaderAccept(t *testing.T) {
 
@@ -111,7 +93,7 @@ func TestSendStream(t *testing.T) {
 		name         string
 		opts         *types.ResizeOption
 		headerAccept string
-		contentFn    func() io.ReadCloser
+		contentFn    func() *bytes.Buffer
 
 		wantErr assert.ErrorAssertionFunc
 		wantFn  func(t *testing.T, rec *httptest.ResponseRecorder)
@@ -120,8 +102,10 @@ func TestSendStream(t *testing.T) {
 			name:         "successWithPlainText",
 			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypeText, Source: "/text.txt", Headers: types.Headers{"X-Custom": "foo"}, Tags: []string{"tag1"}},
 			headerAccept: "text/plain",
-			contentFn: func() io.ReadCloser {
-				return io.NopCloser(bytes.NewReader([]byte("hello")))
+			contentFn: func() *bytes.Buffer {
+				buff := ctx.BufferPool.Get().(*bytes.Buffer)
+				buff.WriteString("hello")
+				return buff
 			},
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusOK, rec.Code)
@@ -135,10 +119,12 @@ func TestSendStream(t *testing.T) {
 			name:         "successWithResizeFormat",
 			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/paysage.png", Headers: types.Headers{"X-Custom": "foo"}, Width: 500},
 			headerAccept: "image/avif,image/webp,image/png",
-			contentFn: func() io.ReadCloser {
+			contentFn: func() *bytes.Buffer {
 				file, errOpen := os.Open("../../fixtures/paysage.png")
 				assert.NoError(t, errOpen)
-				return file
+				buff := ctx.BufferPool.Get().(*bytes.Buffer)
+				_, _ = io.Copy(buff, file)
+				return buff
 			},
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusOK, rec.Code)
@@ -152,27 +138,15 @@ func TestSendStream(t *testing.T) {
 			name:         "failedTransform",
 			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/paysage.png", Width: 500},
 			headerAccept: "image/avif,image/webp,image/png",
-			contentFn: func() io.ReadCloser {
-				return &errorReader{r: bytes.NewBufferString("")}
+			contentFn: func() *bytes.Buffer {
+				buff := bytes.NewBuffer([]byte("test"))
+				buff.Reset()
+				return buff
 			},
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusInternalServerError, rec.Code)
 				assert.Contains(t, rec.Header().Get(echo.HeaderContentType), types.MimeTypeText)
 				assert.Equal(t, "failed to transform image /paysage.png", rec.Body.String())
-			},
-			wantErr: assert.NoError,
-		},
-		{
-			name:         "failedReadData",
-			opts:         &types.ResizeOption{Format: types.TypePNG, OriginFormat: types.TypePNG, Source: "/paysage.png"},
-			headerAccept: "image/avif,image/webp,image/png",
-			contentFn: func() io.ReadCloser {
-				return &errorReader{r: io.NopCloser(bytes.NewBufferString(""))}
-			},
-			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
-				assert.Equal(t, http.StatusInternalServerError, rec.Code)
-				assert.Contains(t, rec.Header().Get(echo.HeaderContentType), types.MimeTypeText)
-				assert.Equal(t, "failed to read data /paysage.png", rec.Body.String())
 			},
 			wantErr: assert.NoError,
 		},
@@ -194,24 +168,4 @@ func TestSendStream(t *testing.T) {
 			tt.wantFn(t, rec)
 		})
 	}
-}
-
-func Test_prepareContext(t *testing.T) {
-	buff := bytes.NewBufferString("")
-	ctx := context.TestContext(buff)
-
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://127.0.0.1"), nil)
-	req.Host = "127.0.0.1"
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	c.Request().Header.Set(echo.HeaderXRequestID, "id")
-	c.Request().Host = "127.0.0.1:8080"
-	c.Request().URL.Path = "/from/test"
-
-	newCtx := prepareContext(ctx, c)
-
-	newCtx.Logger.Error("debug")
-	assert.Contains(t, buff.String(), "level=ERROR msg=debug request_id=id host=127.0.0.1 uri_path=/from/test")
 }

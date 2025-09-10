@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -33,6 +34,9 @@ func TestDefaultContext_Success(t *testing.T) {
 	}
 	got := DefaultContext()
 	assert.NotNil(t, got.done)
+	assert.IsType(t, &sync.Pool{}, got.BufferPool)
+	got.BufferPool.Get()
+	got.BufferPool = nil
 	got.done = nil
 	got.sigs = nil
 	assert.Equal(t, want, got)
@@ -63,6 +67,9 @@ func TestTestContext(t *testing.T) {
 	}
 	got := TestContext(nil)
 	assert.NotNil(t, got.done)
+	assert.IsType(t, &sync.Pool{}, got.BufferPool)
+	got.BufferPool.Get()
+	got.BufferPool = nil
 	got.done = nil
 	got.sigs = nil
 	assert.Equal(t, want, got)
@@ -84,6 +91,8 @@ func TestTestContext_WithLogBuffer(t *testing.T) {
 	}
 	got := TestContext(io.Discard)
 	assert.NotNil(t, got.done)
+	assert.IsType(t, &sync.Pool{}, got.BufferPool)
+	got.BufferPool = nil
 	got.done = nil
 	got.sigs = nil
 	assert.Equal(t, want, got)
@@ -135,15 +144,6 @@ func TestContext_Signal(t *testing.T) {
 	ctx.Signal() <- syscall.SIGINT
 	time.Sleep(10 * time.Millisecond)
 	assert.Equal(t, false, running)
-}
-
-func TestContext_Clone(t *testing.T) {
-	want := TestContext(nil)
-	got := want.Clone()
-	assert.Equal(t, want, got)
-
-	got.Fs = nil
-	assert.NotEqual(t, want.Fs, got.Fs)
 }
 
 func TestContext_GetFS(t *testing.T) {

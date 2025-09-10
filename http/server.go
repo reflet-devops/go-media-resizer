@@ -3,6 +3,11 @@ package http
 import (
 	"crypto/subtle"
 	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"os"
+
 	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
@@ -16,10 +21,6 @@ import (
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"github.com/reflet-devops/go-media-resizer/storage"
 	"github.com/reflet-devops/go-media-resizer/types"
-	"io"
-	"net"
-	"net/http"
-	"os"
 )
 
 type Host struct {

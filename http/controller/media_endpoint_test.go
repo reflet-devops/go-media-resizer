@@ -18,6 +18,25 @@ import (
 	"testing"
 )
 
+type errorReader struct {
+	r     io.Reader
+	limit int
+	count int
+}
+
+func (e *errorReader) Read(p []byte) (n int, err error) {
+	if e.count >= e.limit {
+		return 0, fmt.Errorf("simulated read error")
+	}
+	n, err = e.r.Read(p)
+	e.count += n
+	return
+}
+
+func (e *errorReader) Close() error {
+	return nil
+}
+
 func Test_GetMedia(t *testing.T) {
 	ctx := context.TestContext(nil)
 	e := echo.New()
@@ -131,6 +150,28 @@ func Test_GetMedia(t *testing.T) {
 				assert.Equal(t, http.StatusNotFound, rec.Code)
 				assert.Contains(t, rec.Header().Get(echo.HeaderContentType), types.MimeTypeText)
 				assert.Equal(t, "file not found", rec.Body.String())
+			},
+		},
+		{
+			name:     "fail_Copy",
+			resource: "resource.txt",
+			prjConf: &config.Project{
+				AcceptTypeFiles: []string{types.TypeText},
+				Endpoints: []config.Endpoint{
+					{
+						Regex:             "",
+						DefaultResizeOpts: types.ResizeOption{},
+						CompiledRegex:     nil,
+					},
+				},
+			},
+			mockFn: func(mockStorage *mockTypes.MockStorage) {
+				mockStorage.EXPECT().GetFile(gomock.Eq("resource.txt")).Times(1).Return(&errorReader{r: bytes.NewBufferString("test")}, nil)
+			},
+			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusInternalServerError, rec.Code)
+				assert.Contains(t, rec.Header().Get(echo.HeaderContentType), types.MimeTypeText)
+				assert.Equal(t, "buffer copy failed", rec.Body.String())
 			},
 		},
 	}

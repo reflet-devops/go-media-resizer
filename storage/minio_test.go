@@ -301,6 +301,20 @@ func getMinioObject(objectInfo libMinio.ObjectInfo, err error) *libMinio.Object 
 	field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
 	field.Set(reflect.ValueOf(true))
 
+	field = v.FieldByName("cancel")
+	field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
+	field.Set(reflect.ValueOf(func() {}))
+
+	field = v.FieldByName("reqCh")
+	field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()
+	elemType := field.Type().Elem()
+
+	bidirectionalChanType := reflect.ChanOf(reflect.BothDir, elemType)
+	bidirectionalChan := reflect.MakeChan(bidirectionalChanType, 0)
+
+	unidirectionalChan := bidirectionalChan.Convert(field.Type())
+	field.Set(unidirectionalChan)
+
 	if err != nil {
 		field = v.FieldByName("prevErr")
 		field = reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem()

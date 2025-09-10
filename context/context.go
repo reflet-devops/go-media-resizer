@@ -1,6 +1,7 @@
 package context
 
 import (
+	"bytes"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/reflet-devops/go-media-resizer/config"
 	appProm "github.com/reflet-devops/go-media-resizer/prometheus"
@@ -10,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 )
 
@@ -21,6 +23,8 @@ type Context struct {
 	sigs       chan os.Signal
 	done       chan bool
 	HttpClient types.Client
+
+	BufferPool *sync.Pool
 
 	Config *config.Config
 
@@ -74,12 +78,10 @@ func DefaultContext() *Context {
 		sigs:            sigs,
 		Config:          config.DefaultConfig(),
 		MetricsRegistry: prometheus.NewRegistry(),
+		BufferPool: &sync.Pool{
+			New: func() interface{} { return bytes.NewBuffer(make([]byte, 0, 1024*1024*5)) },
+		},
 	}
-}
-
-func (c *Context) Clone() *Context {
-	newCtx := *c
-	return &newCtx
 }
 
 func TestContext(logBuffer io.Writer) *Context {
@@ -100,5 +102,8 @@ func TestContext(logBuffer io.Writer) *Context {
 		sigs:            sigs,
 		Config:          config.DefaultConfig(),
 		MetricsRegistry: prometheus.NewRegistry(),
+		BufferPool: &sync.Pool{
+			New: func() interface{} { return bytes.NewBuffer(make([]byte, 0, 1024*1024*5)) },
+		},
 	}
 }

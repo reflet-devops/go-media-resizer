@@ -1,19 +1,21 @@
 package controller
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/parser"
 	"github.com/reflet-devops/go-media-resizer/types"
-	"net/http"
-	"strings"
 )
 
 func GetMedia(ctx *context.Context, project *config.Project, storage types.Storage) func(c echo.Context) error {
 	return func(c echo.Context) error {
-		ctx = prepareContext(ctx, c)
 
 		requestPath := strings.Replace(c.Request().RequestURI, fmt.Sprintf("/%s", project.PrefixPath), "", 1)
 		for _, endpoint := range project.Endpoints {
@@ -27,14 +29,24 @@ func GetMedia(ctx *context.Context, project *config.Project, storage types.Stora
 				continue
 			}
 
-			content, errGetFile := storage.GetFile(opts.Source)
+			file, errGetFile := storage.GetFile(opts.Source)
 			if errGetFile != nil {
 				ctx.Logger.Debug(fmt.Sprintf("failed to get file %s: %s", errGetFile.Error(), opts.Source))
 				return c.String(http.StatusNotFound, "file not found")
 			}
+
+			buffer := ctx.BufferPool.Get().(*bytes.Buffer)
+			_, errCopy := io.Copy(buffer, file)
+			if errCopy != nil {
+				resetBuffer(ctx, buffer)
+				_ = file.Close()
+				return c.String(http.StatusInternalServerError, "buffer copy failed")
+			}
+			_ = file.Close()
+
 			opts.AddTag(types.GetTagSourcePathHash(opts.Source))
 
-			return SendStream(ctx, c, opts, content)
+			return SendStream(ctx, c, opts, buffer)
 		}
 		return c.String(http.StatusNotFound, "file not found")
 	}

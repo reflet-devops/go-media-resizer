@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/context"
@@ -167,9 +168,10 @@ func Test_fetchCGIResource_Success(t *testing.T) {
 			return nil
 		},
 	)
-	body, err := fetchCGIResource(ctx, source)
+	buff := &bytes.Buffer{}
+	err := fetchCGIResource(ctx, source, buff)
 	assert.NoError(t, err)
-	assert.Equal(t, "hello world", string(body))
+	assert.Equal(t, "hello world", buff.String())
 }
 
 func Test_fetchCGIResource_Error_Fail(t *testing.T) {
@@ -190,7 +192,8 @@ func Test_fetchCGIResource_Error_Fail(t *testing.T) {
 	req.SetRequestURI(source)
 
 	mockClient.EXPECT().DoTimeout(gomock.Eq(req), gomock.Eq(resp), gomock.Eq(timeOut)).Return(fmt.Errorf("test error"))
-	_, err := fetchCGIResource(ctx, source)
+	buff := &bytes.Buffer{}
+	err := fetchCGIResource(ctx, source, buff)
 	assert.Error(t, err)
 	assert.Equal(t, "fetchCGIResource: GET http://image.com/image.png: error with request: test error", err.Error())
 }
@@ -218,7 +221,8 @@ func Test_fetchCGIResource_StatusCode_Error(t *testing.T) {
 			return nil
 		},
 	)
-	_, err := fetchCGIResource(ctx, source)
+	buff := &bytes.Buffer{}
+	err := fetchCGIResource(ctx, source, buff)
 	assert.Error(t, err)
 	assert.Equal(t, "fetchCGIResource: GET http://image.com/image.png: invalid status code status code: 403", err.Error())
 }

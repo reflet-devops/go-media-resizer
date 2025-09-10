@@ -1,20 +1,19 @@
 package controller
 
 import (
+	"bytes"
 	"fmt"
-	"github.com/labstack/echo/v4"
-	"github.com/reflet-devops/go-media-resizer/context"
-	"github.com/reflet-devops/go-media-resizer/hash"
-	"github.com/reflet-devops/go-media-resizer/http/urltools"
-	"github.com/reflet-devops/go-media-resizer/logger"
-	"github.com/reflet-devops/go-media-resizer/transform"
-	"github.com/reflet-devops/go-media-resizer/types"
-	"io"
 	"net/http"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/labstack/echo/v4"
+	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/hash"
+	"github.com/reflet-devops/go-media-resizer/transform"
+	"github.com/reflet-devops/go-media-resizer/types"
 )
 
 var TimeLocationGMT *time.Location
@@ -41,13 +40,9 @@ func DetectFormatFromHeaderAccept(acceptHeaderValue string, opts *types.ResizeOp
 	opts.Format = opts.OriginFormat
 }
 
-func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, content io.ReadCloser) error {
+func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, content *bytes.Buffer) error {
 	defer func() {
-		if content != nil {
-			_ = content.Close()
-			content = nil
-
-		}
+		resetBuffer(ctx, content)
 	}()
 	vary := []string{echo.HeaderAccept}
 	acceptHeaderValue := c.Request().Header.Get(echo.HeaderAccept)
@@ -55,21 +50,16 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 
 	if opts.NeedTransform() {
 		var errTransform error
-		content, errTransform = transform.Transform(content, opts)
+		errTransform = transform.Transform(content, opts)
 		if errTransform != nil {
 			ctx.Logger.Error(fmt.Sprintf("failed to read data %s: %v", opts.Source, errTransform))
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to transform image %s", opts.Source))
 		}
 	}
 
-	data, err := io.ReadAll(content)
-	if err != nil {
-		ctx.Logger.Error(fmt.Sprintf("failed to read data %s: %v", opts.Source, err))
-		return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to read data %s", opts.Source))
-	}
-	contentHash, _ := hash.GenerateMD5FromString(string(data))
+	contentHash, _ := hash.GenerateMD5FromBytes(content.Bytes())
 
-	c.Response().Header().Add(echo.HeaderContentLength, strconv.Itoa(len(data)))
+	c.Response().Header().Add(echo.HeaderContentLength, strconv.Itoa(content.Len()))
 	c.Response().Header().Add("Date", time.Now().In(TimeLocationGMT).Format(time.RFC1123))
 	c.Response().Header().Add("ETag", contentHash)
 	c.Response().Header().Add(echo.HeaderVary, strings.Join(vary, ", "))
@@ -81,15 +71,12 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 		c.Response().Header().Add(k, v)
 	}
 
-	return c.Blob(http.StatusOK, types.GetMimeType(opts.Format), data)
+	return c.Stream(http.StatusOK, types.GetMimeType(opts.Format), content)
 }
 
-func prepareContext(ctx *context.Context, c echo.Context) *context.Context {
-	newCtx := ctx.Clone()
-	newCtx.Logger = newCtx.Logger.With(
-		logger.RequestIDKey, c.Request().Header.Get(echo.HeaderXRequestID),
-		logger.HostKey, urltools.RemovePortNumber(c.Request().Host),
-		logger.UriPathKey, c.Request().URL.Path,
-	)
-	return newCtx
+func resetBuffer(ctx *context.Context, content *bytes.Buffer) {
+	if content != nil {
+		content.Reset()
+		ctx.BufferPool.Put(content)
+	}
 }

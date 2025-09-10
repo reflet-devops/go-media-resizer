@@ -131,7 +131,7 @@ func TestFormat(t *testing.T) {
 
 				img, _, err := image.Decode(file)
 				assert.NoError(t, err)
-				err = avif.Encode(w, img, avif.Options{Speed: 10, Quality: 60})
+				err = avif.Encode(w, img, avif.Options{Speed: avif.DefaultSpeed, Quality: avif.DefaultQuality})
 				assert.NoError(t, err)
 
 				shaSum, err := hash.GenerateSHA256(w)
@@ -214,10 +214,10 @@ func TestFormat(t *testing.T) {
 			assert.NoError(t, errOpen)
 			img, _, errDecode := image.Decode(file)
 			assert.NoError(t, errDecode)
-
-			got, err := Format(img, tt.opts)
+			got := &bytes.Buffer{}
+			err := Format(got, img, tt.opts)
 			tt.wantErr(t, err)
-			if got != nil {
+			if got.Len() > 0 {
 				hasher := sha256.New()
 				_, err = io.Copy(hasher, got)
 				assert.NoError(t, err)
@@ -283,12 +283,13 @@ func TestTransform(t *testing.T) {
 			if tt.file != nil {
 				file = tt.file
 			}
-
-			got, err := Transform(file, tt.opts)
+			got := &bytes.Buffer{}
+			_, _ = io.Copy(got, file)
+			err := Transform(got, tt.opts)
 			if !tt.wantErr(t, err, fmt.Sprintf("Transform(%v, %v)", file, tt.opts)) {
 				return
 			}
-			if got != nil {
+			if got.Len() > 0 {
 				hasher := sha256.New()
 				_, err = io.Copy(hasher, got)
 				assert.NoError(t, err)

@@ -3,20 +3,19 @@ package controller
 import (
 	"bytes"
 	"fmt"
+	buildinHttp "net/http"
+	"strings"
+
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"github.com/reflet-devops/go-media-resizer/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/valyala/fasthttp"
-	"io"
-	buildinHttp "net/http"
-	"strings"
 )
 
 func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 	return func(c echo.Context) error {
-		ctx = prepareContext(ctx, c)
 		source := c.Param("source")
 		opts := ctx.Config.ResizeCGI.DefaultResizeOpts
 		opts.Source = source
@@ -25,7 +24,6 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 		fileExtension := urltools.GetExtension(source)
 		fileType := types.GetType(fileExtension)
 		opts.OriginFormat = fileType
-
 		optMap := parseOption(c.Param("options"))
 
 		fileTypeIsValid := types.ValidateType(fileType, ctx.Config.AcceptTypeFiles)
@@ -39,11 +37,12 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 			return c.String(buildinHttp.StatusInternalServerError, err.Error())
 		}
 
-		resource, err := fetchCGIResource(ctx, source)
-		if err != nil {
-			return c.String(buildinHttp.StatusInternalServerError, err.Error())
+		buffer := ctx.BufferPool.Get().(*bytes.Buffer)
+		errFetch := fetchCGIResource(ctx, source, buffer)
+		if errFetch != nil {
+			resetBuffer(ctx, buffer)
+			return c.String(buildinHttp.StatusInternalServerError, errFetch.Error())
 		}
-		buffer := io.NopCloser(bytes.NewBuffer(resource))
 
 		opts.AddTag(types.GetTagSourcePathHash(urltools.GetUri(opts.Source)))
 
@@ -72,7 +71,7 @@ func parseOption(optsHeader string) map[string]interface{} {
 	return optMap
 }
 
-func fetchCGIResource(ctx *context.Context, source string) ([]byte, error) {
+func fetchCGIResource(ctx *context.Context, source string, buffer *bytes.Buffer) error {
 	req := fasthttp.AcquireRequest()
 	resp := fasthttp.AcquireResponse()
 	defer func() {
@@ -85,16 +84,16 @@ func fetchCGIResource(ctx *context.Context, source string) ([]byte, error) {
 	}()
 	req.Header.SetMethod(buildinHttp.MethodGet)
 	req.SetRequestURI(source)
-
 	ctx.Logger.Debug(fmt.Sprintf("fetchCGIResource: GET %s", source))
 	err := ctx.HttpClient.DoTimeout(req, resp, ctx.Config.RequestTimeout)
 
 	if err != nil {
-		return nil, fmt.Errorf("fetchCGIResource: GET %s: error with request: %v", source, err)
+		return fmt.Errorf("fetchCGIResource: GET %s: error with request: %v", source, err)
 	}
 
 	if resp.StatusCode() != fasthttp.StatusOK {
-		return nil, fmt.Errorf("fetchCGIResource: GET %s: invalid status code status code: %d", source, resp.StatusCode())
+		return fmt.Errorf("fetchCGIResource: GET %s: invalid status code status code: %d", source, resp.StatusCode())
 	}
-	return resp.Body(), nil
+	_, err = buffer.Write(resp.Body())
+	return err
 }

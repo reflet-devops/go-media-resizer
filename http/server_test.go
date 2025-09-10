@@ -44,7 +44,7 @@ func Test_CreateServerHTTP_Success(t *testing.T) {
 	assert.Equal(t, os.Stdout, e.Logger.Output())
 }
 
-func Test_CreateServerHTTP_MidllewareLogger_Fail(t *testing.T) {
+func Test_CreateServerHTTP_MiddlewareLogger_Fail(t *testing.T) {
 	ctx := context.TestContext(nil)
 	ctx.Config.HTTP.AccessLogPath = "/path/log.txt"
 	ctx.Fs = afero.NewReadOnlyFs(ctx.Fs)
