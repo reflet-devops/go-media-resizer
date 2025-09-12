@@ -31,7 +31,7 @@ func GetMedia(ctx *context.Context, project *config.Project, storage types.Stora
 
 			file, errGetFile := storage.GetFile(opts.Source)
 			if errGetFile != nil {
-				ctx.Logger.Debug(fmt.Sprintf("failed to get file %s: %s", errGetFile.Error(), opts.Source))
+				ctx.Logger.Debug(fmt.Sprintf("failed to get file %s: %s", errGetFile.Error(), opts.Source), addLogAttr(c)...)
 				return c.String(http.StatusNotFound, "file not found")
 			}
 

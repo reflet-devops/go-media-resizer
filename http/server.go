@@ -44,7 +44,7 @@ func CreateServerHTTP(ctx *context.Context) (*echo.Echo, error) {
 		extractorTrustOptions...,
 	)
 
-	e.Use(echoMiddleware.RequestID())
+	middleware.ConfigureRequestIdMiddleware(e)
 	err = middleware.ConfigureAccessLogMiddleware(e, ctx)
 	if err != nil {
 		return nil, fmt.Errorf("can't set access log middleware: %v", err)

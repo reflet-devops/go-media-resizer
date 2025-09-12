@@ -3,6 +3,11 @@ package controller
 import (
 	"bytes"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/context"
 	mockTypes "github.com/reflet-devops/go-media-resizer/mocks/types"
@@ -10,10 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/mock/gomock"
-	"net/http"
-	"net/http/httptest"
-	"testing"
-	"time"
 )
 
 func Test_GetMediaCGI_AcceptedType_Fail(t *testing.T) {
@@ -156,12 +157,13 @@ func Test_fetchCGIResource_Success(t *testing.T) {
 	ctx.Config.RequestTimeout = timeOut
 	ctx.HttpClient = mockClient
 
-	req := fasthttp.AcquireRequest()
-	resp := fasthttp.AcquireResponse()
-	req.Header.SetMethod(http.MethodGet)
-	req.SetRequestURI(source)
+	mockClient.EXPECT().DoTimeout(gomock.Cond(func(req *fasthttp.Request) bool {
+		if req.URI().String() != source || !req.Header.IsGet() {
+			return false
+		}
 
-	mockClient.EXPECT().DoTimeout(gomock.Eq(req), gomock.Eq(resp), gomock.Eq(timeOut)).DoAndReturn(
+		return true
+	}), gomock.Any(), gomock.Eq(timeOut)).DoAndReturn(
 		func(req *fasthttp.Request, respFn *fasthttp.Response, timeout time.Duration) error {
 			respFn.SetStatusCode(fasthttp.StatusOK)
 			respFn.SetBody([]byte("hello world"))
@@ -169,7 +171,7 @@ func Test_fetchCGIResource_Success(t *testing.T) {
 		},
 	)
 	buff := &bytes.Buffer{}
-	err := fetchCGIResource(ctx, source, buff)
+	err := fetchCGIResource(ctx, "request-id", source, buff)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello world", buff.String())
 }
@@ -186,14 +188,15 @@ func Test_fetchCGIResource_Error_Fail(t *testing.T) {
 	ctx.Config.RequestTimeout = timeOut
 	ctx.HttpClient = mockClient
 
-	req := fasthttp.AcquireRequest()
-	resp := fasthttp.AcquireResponse()
-	req.Header.SetMethod(http.MethodGet)
-	req.SetRequestURI(source)
+	mockClient.EXPECT().DoTimeout(gomock.Cond(func(req *fasthttp.Request) bool {
+		if req.URI().String() != source || !req.Header.IsGet() {
+			return false
+		}
 
-	mockClient.EXPECT().DoTimeout(gomock.Eq(req), gomock.Eq(resp), gomock.Eq(timeOut)).Return(fmt.Errorf("test error"))
+		return true
+	}), gomock.Any(), gomock.Eq(timeOut)).Return(fmt.Errorf("test error"))
 	buff := &bytes.Buffer{}
-	err := fetchCGIResource(ctx, source, buff)
+	err := fetchCGIResource(ctx, "request-id", source, buff)
 	assert.Error(t, err)
 	assert.Equal(t, "fetchCGIResource: GET http://image.com/image.png: error with request: test error", err.Error())
 }
@@ -210,19 +213,20 @@ func Test_fetchCGIResource_StatusCode_Error(t *testing.T) {
 	ctx.Config.RequestTimeout = timeOut
 	ctx.HttpClient = mockClient
 
-	req := fasthttp.AcquireRequest()
-	resp := fasthttp.AcquireResponse()
-	req.Header.SetMethod(http.MethodGet)
-	req.SetRequestURI(source)
+	mockClient.EXPECT().DoTimeout(gomock.Cond(func(req *fasthttp.Request) bool {
+		if req.URI().String() != source || !req.Header.IsGet() {
+			return false
+		}
 
-	mockClient.EXPECT().DoTimeout(gomock.Eq(req), gomock.Eq(resp), gomock.Eq(timeOut)).DoAndReturn(
+		return true
+	}), gomock.Any(), gomock.Eq(timeOut)).DoAndReturn(
 		func(req *fasthttp.Request, respFn *fasthttp.Response, timeout time.Duration) error {
 			respFn.SetStatusCode(fasthttp.StatusForbidden)
 			return nil
 		},
 	)
 	buff := &bytes.Buffer{}
-	err := fetchCGIResource(ctx, source, buff)
+	err := fetchCGIResource(ctx, "request-id", source, buff)
 	assert.Error(t, err)
 	assert.Equal(t, "fetchCGIResource: GET http://image.com/image.png: invalid status code status code: 403", err.Error())
 }

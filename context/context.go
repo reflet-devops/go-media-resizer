@@ -2,17 +2,18 @@ package context
 
 import (
 	"bytes"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/reflet-devops/go-media-resizer/config"
-	appProm "github.com/reflet-devops/go-media-resizer/prometheus"
-	"github.com/reflet-devops/go-media-resizer/types"
-	"github.com/spf13/afero"
 	"io"
 	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/reflet-devops/go-media-resizer/config"
+	appProm "github.com/reflet-devops/go-media-resizer/prometheus"
+	"github.com/reflet-devops/go-media-resizer/types"
+	"github.com/spf13/afero"
 )
 
 type Context struct {
@@ -79,7 +80,7 @@ func DefaultContext() *Context {
 		Config:          config.DefaultConfig(),
 		MetricsRegistry: prometheus.NewRegistry(),
 		BufferPool: &sync.Pool{
-			New: func() interface{} { return bytes.NewBuffer(make([]byte, 0, 1024*1024*5)) },
+			New: func() interface{} { return bytes.NewBuffer(make([]byte, 0, 1024*1024)) },
 		},
 	}
 }
@@ -103,7 +104,7 @@ func TestContext(logBuffer io.Writer) *Context {
 		Config:          config.DefaultConfig(),
 		MetricsRegistry: prometheus.NewRegistry(),
 		BufferPool: &sync.Pool{
-			New: func() interface{} { return bytes.NewBuffer(make([]byte, 0, 1024*1024*5)) },
+			New: func() interface{} { return bytes.NewBuffer(make([]byte, 0, 1024*1024)) },
 		},
 	}
 }

@@ -12,6 +12,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/hash"
+	"github.com/reflet-devops/go-media-resizer/http/urltools"
+	"github.com/reflet-devops/go-media-resizer/logger"
 	"github.com/reflet-devops/go-media-resizer/transform"
 	"github.com/reflet-devops/go-media-resizer/types"
 )
@@ -52,7 +54,7 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 		var errTransform error
 		errTransform = transform.Transform(content, opts)
 		if errTransform != nil {
-			ctx.Logger.Error(fmt.Sprintf("failed to read data %s: %v", opts.Source, errTransform))
+			ctx.Logger.Error(fmt.Sprintf("failed to read data %s: %v", opts.Source, errTransform), addLogAttr(c)...)
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to transform image %s", opts.Source))
 		}
 	}
@@ -78,5 +80,13 @@ func resetBuffer(ctx *context.Context, content *bytes.Buffer) {
 	if content != nil {
 		content.Reset()
 		ctx.BufferPool.Put(content)
+	}
+}
+
+func addLogAttr(c echo.Context) []any {
+	return []any{
+		logger.RequestIDKey, c.Request().Header.Get(echo.HeaderXRequestID),
+		logger.HostKey, urltools.RemovePortNumber(c.Request().Host),
+		logger.UriPathKey, c.Request().URL.Path,
 	}
 }

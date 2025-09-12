@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
+	"github.com/reflet-devops/go-media-resizer/logger"
 	"github.com/reflet-devops/go-media-resizer/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/valyala/fasthttp"
@@ -28,7 +29,7 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 
 		fileTypeIsValid := types.ValidateType(fileType, ctx.Config.AcceptTypeFiles)
 		if !fileTypeIsValid {
-			ctx.Logger.Error(fmt.Sprintf("GetMediaCGI: file type not accepted: %s", source))
+			ctx.Logger.Error(fmt.Sprintf("GetMediaCGI: file type not accepted: %s", source), addLogAttr(c)...)
 			return c.String(buildinHttp.StatusInternalServerError, "file type not accepted")
 		}
 
@@ -38,7 +39,7 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 		}
 
 		buffer := ctx.BufferPool.Get().(*bytes.Buffer)
-		errFetch := fetchCGIResource(ctx, source, buffer)
+		errFetch := fetchCGIResource(ctx, c.Request().Header.Get(echo.HeaderXRequestID), source, buffer)
 		if errFetch != nil {
 			resetBuffer(ctx, buffer)
 			return c.String(buildinHttp.StatusInternalServerError, errFetch.Error())
@@ -71,7 +72,7 @@ func parseOption(optsHeader string) map[string]interface{} {
 	return optMap
 }
 
-func fetchCGIResource(ctx *context.Context, source string, buffer *bytes.Buffer) error {
+func fetchCGIResource(ctx *context.Context, requestId string, source string, buffer *bytes.Buffer) error {
 	req := fasthttp.AcquireRequest()
 	resp := fasthttp.AcquireResponse()
 	defer func() {
@@ -83,8 +84,9 @@ func fetchCGIResource(ctx *context.Context, source string, buffer *bytes.Buffer)
 		}
 	}()
 	req.Header.SetMethod(buildinHttp.MethodGet)
+	req.Header.Add(echo.HeaderXRequestID, requestId)
 	req.SetRequestURI(source)
-	ctx.Logger.Debug(fmt.Sprintf("fetchCGIResource: GET %s", source))
+	ctx.Logger.Debug(fmt.Sprintf("fetchCGIResource: GET %s", source), logger.RequestIDKey, requestId)
 	err := ctx.HttpClient.DoTimeout(req, resp, ctx.Config.RequestTimeout)
 
 	if err != nil {
