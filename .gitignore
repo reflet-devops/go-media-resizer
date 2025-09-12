@@ -6,3 +6,5 @@
 /tmp/
 dist/
 /go-media-resizer
+/loadtests/config/config.json
+/loadtests/config/image-paths.json

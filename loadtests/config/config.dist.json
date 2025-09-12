@@ -1,0 +1,125 @@
+{
+    "baseUrl": "http://localhost:8080",
+    "pathPrefix": "",
+    "scenarios": {
+        "source": {
+            "response_time": 200,
+            "small": {
+                "rate": 5,
+                "timeUnit": "1s",
+                "preAllocatedVUs": 0,
+                "maxVUs": 28,
+                "duration": "1m"
+            },
+            "medium": {
+                "rate": 5,
+                "timeUnit": "1s",
+                "preAllocatedVUs": 0,
+                "maxVUs": 10,
+                "duration": "1m"
+            },
+            "large": {
+                "rate": 1,
+                "timeUnit": "1s",
+                "preAllocatedVUs": 0,
+                "maxVUs": 5,
+                "duration": "1m"
+            }
+        },
+        "format": {
+            "response_time": 400,
+            "avif": {
+                "rate": 1,
+                "timeUnit": "30s",
+                "preAllocatedVUs": 0,
+                "maxVUs": 5,
+                "duration": "1m"
+            },
+            "webp": {
+                "rate": 1,
+                "timeUnit": "30s",
+                "preAllocatedVUs": 0,
+                "maxVUs": 5,
+                "duration": "1m"
+            }
+        },
+        "resize": {
+            "small": {
+                "rate": 4,
+                "timeUnit": "1s",
+                "preAllocatedVUs": 0,
+                "maxVUs": 20,
+                "duration": "1m",
+                "response_time": 500
+            },
+            "medium": {
+                "rate": 3,
+                "timeUnit": "1s",
+                "preAllocatedVUs": 0,
+                "maxVUs": 10,
+                "duration": "1m",
+                "response_time": 300
+            },
+            "large": {
+                "rate": 1,
+                "timeUnit": "5s",
+                "preAllocatedVUs": 0,
+                "maxVUs": 5,
+                "duration": "1m",
+                "response_time": 300
+            }
+        },
+        "resizeFormat": {
+            "small": {
+                "rate": 1,
+                "timeUnit": "1s",
+                "preAllocatedVUs": 0,
+                "maxVUs": 20,
+                "duration": "1m",
+                "response_time": 500
+            },
+            "medium": {
+                "rate": 1,
+                "timeUnit": "1s",
+                "preAllocatedVUs": 0,
+                "maxVUs": 10,
+                "duration": "1m",
+                "response_time": 300
+            },
+            "large": {
+                "rate": 1,
+                "timeUnit": "2s",
+                "preAllocatedVUs": 0,
+                "maxVUs": 5,
+                "duration": "1m",
+                "response_time": 300
+            }
+        },
+        "cdnCgi": {
+            "small": {
+                "rate": 1,
+                "timeUnit": "5s",
+                "preAllocatedVUs": 0,
+                "maxVUs": 20,
+                "duration": "1m",
+                "response_time": 500
+            },
+            "medium": {
+                "rate": 1,
+                "timeUnit": "5s",
+                "preAllocatedVUs": 0,
+                "maxVUs": 10,
+                "duration": "1m",
+                "response_time": 300
+            },
+            "large": {
+                "rate": 1,
+                "timeUnit": "10s",
+                "preAllocatedVUs": 0,
+                "maxVUs": 5,
+                "duration": "1m",
+                "response_time": 300
+            }
+        }
+    }
+}
