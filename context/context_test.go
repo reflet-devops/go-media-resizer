@@ -1,10 +1,6 @@
 package context
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/reflet-devops/go-media-resizer/config"
-	"github.com/spf13/afero"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"log/slog"
 	"os"
@@ -13,6 +9,11 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/reflet-devops/go-media-resizer/config"
+	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDefaultContext_Success(t *testing.T) {
@@ -35,8 +36,11 @@ func TestDefaultContext_Success(t *testing.T) {
 	got := DefaultContext()
 	assert.NotNil(t, got.done)
 	assert.IsType(t, &sync.Pool{}, got.BufferPool)
+	assert.IsType(t, &sync.Pool{}, got.OptsResizePool)
 	got.BufferPool.Get()
+	got.OptsResizePool.Get()
 	got.BufferPool = nil
+	got.OptsResizePool = nil
 	got.done = nil
 	got.sigs = nil
 	assert.Equal(t, want, got)
@@ -68,8 +72,11 @@ func TestTestContext(t *testing.T) {
 	got := TestContext(nil)
 	assert.NotNil(t, got.done)
 	assert.IsType(t, &sync.Pool{}, got.BufferPool)
+	assert.IsType(t, &sync.Pool{}, got.OptsResizePool)
 	got.BufferPool.Get()
+	got.OptsResizePool.Get()
 	got.BufferPool = nil
+	got.OptsResizePool = nil
 	got.done = nil
 	got.sigs = nil
 	assert.Equal(t, want, got)
@@ -92,7 +99,9 @@ func TestTestContext_WithLogBuffer(t *testing.T) {
 	got := TestContext(io.Discard)
 	assert.NotNil(t, got.done)
 	assert.IsType(t, &sync.Pool{}, got.BufferPool)
+	assert.IsType(t, &sync.Pool{}, got.OptsResizePool)
 	got.BufferPool = nil
+	got.OptsResizePool = nil
 	got.done = nil
 	got.sigs = nil
 	assert.Equal(t, want, got)

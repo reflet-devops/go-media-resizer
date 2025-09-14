@@ -18,7 +18,8 @@ import (
 func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 	return func(c echo.Context) error {
 		source := c.Param("source")
-		opts := ctx.Config.ResizeCGI.DefaultResizeOpts
+		opts := ctx.OptsResizePool.Get().(*types.ResizeOption)
+		opts.ResetToDefaults(&ctx.Config.ResizeCGI.DefaultResizeOpts)
 		opts.Source = source
 		opts.Headers = types.Headers{}
 
@@ -50,7 +51,7 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 		for k, v := range ctx.Config.Headers {
 			opts.Headers[k] = v
 		}
-		return SendStream(ctx, c, &opts, buffer)
+		return SendStream(ctx, c, opts, buffer)
 	}
 }
 

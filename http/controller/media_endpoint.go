@@ -19,13 +19,14 @@ func GetMedia(ctx *context.Context, project *config.Project, storage types.Stora
 
 		requestPath := strings.Replace(c.Request().RequestURI, fmt.Sprintf("/%s", project.PrefixPath), "", 1)
 		for _, endpoint := range project.Endpoints {
-			opts, errMatch := parser.ParseOption(&endpoint, project, requestPath)
+			opts := ctx.OptsResizePool.Get().(*types.ResizeOption)
+			found, errMatch := parser.ParseOption(&endpoint, project, requestPath, opts)
 			if errMatch != nil {
 				ctx.Logger.Debug(fmt.Sprintf("%s: %s", errMatch.Error(), requestPath))
 				return c.String(http.StatusBadRequest, errMatch.Error())
 			}
 
-			if opts == nil {
+			if !found {
 				continue
 			}
 

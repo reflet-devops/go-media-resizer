@@ -45,6 +45,7 @@ func DetectFormatFromHeaderAccept(acceptHeaderValue string, opts *types.ResizeOp
 func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, content *bytes.Buffer) error {
 	defer func() {
 		resetBuffer(ctx, content)
+		resetOptResize(ctx, opts)
 	}()
 	vary := []string{echo.HeaderAccept}
 	acceptHeaderValue := c.Request().Header.Get(echo.HeaderAccept)
@@ -80,6 +81,13 @@ func resetBuffer(ctx *context.Context, content *bytes.Buffer) {
 	if content != nil {
 		content.Reset()
 		ctx.BufferPool.Put(content)
+	}
+}
+
+func resetOptResize(ctx *context.Context, opts *types.ResizeOption) {
+	if opts != nil {
+		opts.Reset()
+		ctx.OptsResizePool.Put(opts)
 	}
 }
 

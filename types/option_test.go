@@ -1,8 +1,9 @@
 package types
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestResizeOption_NeedResize(t *testing.T) {
@@ -146,6 +147,60 @@ func TestResizeOption_NeedTransform(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := tt.opts
 			assert.Equalf(t, tt.want, r.NeedTransform(), "NeedTransform()")
+		})
+	}
+}
+
+func TestResizeOption_Reset(t *testing.T) {
+
+	tests := []struct {
+		name   string
+		source ResizeOption
+		want   ResizeOption
+	}{
+		{
+			name:   "successWithNoValue",
+			source: ResizeOption{Source: "", Width: 0, Height: 0, Format: "", Headers: nil, Tags: nil},
+			want:   ResizeOption{},
+		},
+		{
+			name:   "successWithValue",
+			source: ResizeOption{Source: "foo", Width: 100, Height: 100, Format: "test", Headers: Headers{"X-Custom": "foo"}, Tags: []string{"tag1", "tag2"}},
+			want:   ResizeOption{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.source.Reset()
+			assert.Equal(t, tt.want, tt.source)
+		})
+	}
+}
+
+func TestResizeOption_ResetToDefaults(t *testing.T) {
+	tests := []struct {
+		name     string
+		source   *ResizeOption
+		defaults *ResizeOption
+		want     *ResizeOption
+	}{
+		{
+			name:     "successWithNoValue",
+			source:   &ResizeOption{},
+			defaults: &ResizeOption{Format: "auto", Width: 100, Headers: Headers{"X-Custom": "foo"}, Tags: []string{"tag1", "tag2"}},
+			want:     &ResizeOption{Format: "auto", Width: 100, Headers: Headers{"X-Custom": "foo"}, Tags: []string{"tag1", "tag2"}},
+		},
+		{
+			name:     "successWithValue",
+			source:   &ResizeOption{Width: 50, Height: 50, Headers: Headers{"X-Custom": "foo"}, Tags: []string{"tag1", "tag2"}},
+			defaults: &ResizeOption{Format: "auto", Width: 100},
+			want:     &ResizeOption{Format: "auto", Width: 100},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.source.ResetToDefaults(tt.defaults)
+			assert.Equal(t, tt.want, tt.source)
 		})
 	}
 }

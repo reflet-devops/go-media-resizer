@@ -26,6 +26,41 @@ type ResizeOption struct {
 	Tags    []string
 }
 
+func (r *ResizeOption) Reset() {
+	r.OriginFormat = ""
+	r.Format = ""
+	r.Width = 0
+	r.Height = 0
+	r.Quality = 0
+	r.Fit = ""
+	r.Source = ""
+	r.Blur = 0
+	r.Brightness = 0
+	r.Saturation = 0
+	r.Contrast = 0
+	r.Sharpen = 0
+	r.Gamma = 0
+
+	r.Headers = nil
+	r.Tags = nil
+}
+
+func (r *ResizeOption) ResetToDefaults(defaults *ResizeOption) {
+	*r = *defaults
+
+	if defaults.Headers != nil {
+		r.Headers = make(Headers, len(defaults.Headers))
+		for k, v := range defaults.Headers {
+			r.Headers[k] = v
+		}
+	}
+
+	if defaults.Tags != nil {
+		r.Tags = make([]string, len(defaults.Tags), cap(defaults.Tags))
+		copy(r.Tags, defaults.Tags)
+	}
+}
+
 func (r *ResizeOption) HasTags() bool {
 	return len(r.Tags) > 0
 }
