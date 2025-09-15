@@ -3,15 +3,19 @@ package transform
 import (
 	"bytes"
 	"fmt"
-	"github.com/disintegration/imaging"
-	"github.com/gen2brain/avif"
-	"github.com/kolesa-team/go-webp/webp"
-	"github.com/reflet-devops/go-media-resizer/types"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
+	"image/png"
 	_ "image/png"
+	"os"
+	"os/exec"
 	"slices"
+	"time"
+
+	"github.com/disintegration/imaging"
+	"github.com/kolesa-team/go-webp/webp"
+	"github.com/reflet-devops/go-media-resizer/types"
 )
 
 func Transform(file *bytes.Buffer, opts *types.ResizeOption) error {
@@ -64,12 +68,62 @@ func Adjust(img image.Image, opts *types.ResizeOption) image.Image {
 	return img
 }
 
+func encodeAVIFExternal(buffer *bytes.Buffer, img image.Image, quality int) error {
+	tmpDir := "/dev/shm"
+	tmpInput := fmt.Sprintf("%s/avif_input_%d.png", tmpDir, time.Now().UnixNano())
+	tmpOutput := fmt.Sprintf("%s/avif_output_%d.avif", tmpDir, time.Now().UnixNano())
+
+	defer func() {
+		_ = os.Remove(tmpInput)
+		_ = os.Remove(tmpOutput)
+	}()
+
+	inputFile, err := os.Create(tmpInput)
+	if err != nil {
+		return fmt.Errorf("failed to create temp input file: %w", err)
+	}
+
+	err = png.Encode(inputFile, img)
+	_ = inputFile.Close()
+	if err != nil {
+		return fmt.Errorf("failed to encode PNG to temp file: %w", err)
+	}
+
+	cmd := exec.Command("avifenc",
+		"--speed", "10",
+		"--jobs", "all",
+		tmpInput,
+		tmpOutput,
+	)
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("avifenc failed: %w (stderr: %s)", err, stderr.String())
+	}
+
+	avifData, err := os.ReadFile(tmpOutput)
+	if err != nil {
+		return fmt.Errorf("failed to read AVIF output: %w", err)
+	}
+
+	buffer.Write(avifData)
+
+	return nil
+}
+
 func Format(buffer *bytes.Buffer, img image.Image, opts *types.ResizeOption) error {
 	var errFormat error
 
 	if slices.Contains([]string{types.TypeAVIF, types.TypeWEBP}, opts.Format) {
 		if opts.Format == types.TypeAVIF {
-			errFormat = avif.Encode(buffer, img, avif.Options{Speed: avif.DefaultSpeed, Quality: avif.DefaultQuality})
+			quality := 60
+			if opts.Quality != 0 {
+				quality = opts.Quality
+			}
+			errFormat = encodeAVIFExternal(buffer, img, quality)
 		} else if opts.Format == types.TypeWEBP {
 			errFormat = webp.Encode(buffer, img, nil)
 		}
