@@ -48,17 +48,17 @@ docker run -p 8080:8080 -v ./tmp/config.yml:/config.yml go-media-resizer start -
 ##### Debian/Ubuntu:
 ```bash
 sudo apt-get update
-sudo apt-get install libaom-dev libwebp-dev
+sudo apt-get install libaom-dev libwebp-dev libavif-bin
 ```
 
 ##### RHEL/CentOS/Fedora:
 ```bash
-sudo dnf install libaom-devel libwebp-devel
+sudo dnf install libaom-devel libwebp-devel libavif-tools
 ```
 
 ##### macOS:
 ```bash
-brew install webp libaom
+brew install webp libaom libavif
 ```
 
 #### Build Process
