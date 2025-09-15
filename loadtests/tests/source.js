@@ -1,7 +1,7 @@
 import http from 'k6/http';
 import { Counter } from 'k6/metrics';
 import { check, sleep } from 'k6';
-import { selectImageByDistribution } from '../common/utils.js';
+import {scenarioTestEnable, selectImageByDistribution} from '../common/utils.js';
 import {CONFIG, SUMMARY_TREND_STATS} from '../config/config.js';
 const counterByTag = new Counter('counter_by_tag');
 
@@ -25,47 +25,68 @@ export function sourceTest() {
     sleep(1);
 }
 
-export const sourceOptions = {
-    source_small_test: {
-        executor: 'constant-arrival-rate',
-        rate: CONFIG.scenarios.source.small.rate,
-        timeUnit: CONFIG.scenarios.source.small.timeUnit,
-        preAllocatedVUs: CONFIG.scenarios.source.small.preAllocatedVUs,
-        maxVUs: CONFIG.scenarios.source.small.maxVUs,
-        duration: CONFIG.scenarios.source.small.duration,
-        exec: 'sourceTest',
-        env: {
-            DISTRIBUTION: 'small',
-        },
-        tags: {test_type: 'source', distribution: 'small'},
-    },
-    source_medium_test: {
-        executor: 'constant-arrival-rate',
-        rate: CONFIG.scenarios.source.medium.rate,
-        timeUnit: CONFIG.scenarios.source.medium.timeUnit,
-        preAllocatedVUs: CONFIG.scenarios.source.medium.preAllocatedVUs,
-        maxVUs: CONFIG.scenarios.source.medium.maxVUs,
-        duration: CONFIG.scenarios.source.medium.duration,
-        exec: 'sourceTest',
-        env: {
-            DISTRIBUTION: 'medium',
-        },
-        tags: {test_type: 'source', distribution: 'medium'},
-    },
-    source_large_test: {
-        executor: 'constant-arrival-rate',
-        rate: CONFIG.scenarios.source.large.rate,
-        timeUnit: CONFIG.scenarios.source.large.timeUnit,
-        preAllocatedVUs: CONFIG.scenarios.source.large.preAllocatedVUs,
-        maxVUs: CONFIG.scenarios.source.large.maxVUs,
-        duration: CONFIG.scenarios.source.large.duration,
-        exec: 'sourceTest',
-        env: {
-            DISTRIBUTION: 'large',
-        },
-        tags: {test_type: 'source', distribution: 'large'},
-    },
-};
+function generateOptions() {
+    let options = {};
+
+    if (scenarioTestEnable(CONFIG.scenarios.source.large)) {
+        options = {
+            ...options,
+            source_large_test: {
+                executor: 'constant-arrival-rate',
+                rate: CONFIG.scenarios.source.large.rate,
+                timeUnit: CONFIG.scenarios.source.large.timeUnit,
+                preAllocatedVUs: CONFIG.scenarios.source.large.preAllocatedVUs,
+                maxVUs: CONFIG.scenarios.source.large.maxVUs,
+                duration: CONFIG.scenarios.source.large.duration,
+                exec: 'sourceTest',
+                env: {
+                    DISTRIBUTION: 'large',
+                },
+                tags: {test_type: 'source', distribution: 'large'},
+            }
+        };
+    }
+    if (scenarioTestEnable(CONFIG.scenarios.source.medium)) {
+        options = {
+            ...options,
+            source_medium_test: {
+                executor: 'constant-arrival-rate',
+                rate: CONFIG.scenarios.source.medium.rate,
+                timeUnit: CONFIG.scenarios.source.medium.timeUnit,
+                preAllocatedVUs: CONFIG.scenarios.source.medium.preAllocatedVUs,
+                maxVUs: CONFIG.scenarios.source.medium.maxVUs,
+                duration: CONFIG.scenarios.source.medium.duration,
+                exec: 'sourceTest',
+                env: {
+                    DISTRIBUTION: 'medium',
+                },
+                tags: {test_type: 'source', distribution: 'medium'},
+            }
+        };
+    }
+
+    if (scenarioTestEnable(CONFIG.scenarios.source.small)) {
+        options = {
+            ...options,
+            source_small_test: {
+                executor: 'constant-arrival-rate',
+                rate: CONFIG.scenarios.source.small.rate,
+                timeUnit: CONFIG.scenarios.source.small.timeUnit,
+                preAllocatedVUs: CONFIG.scenarios.source.small.preAllocatedVUs,
+                maxVUs: CONFIG.scenarios.source.small.maxVUs,
+                duration: CONFIG.scenarios.source.small.duration,
+                exec: 'sourceTest',
+                env: {
+                    DISTRIBUTION: 'small',
+                },
+                tags: {test_type: 'source', distribution: 'small'},
+            }
+        };
+    }
+    return options;
+}
+
+export const sourceOptions = generateOptions();
 
 export const sourceThresholds = {
     'http_req_failed': ['rate<0.01'],

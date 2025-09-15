@@ -1,7 +1,7 @@
 import http from 'k6/http';
 import { Counter } from 'k6/metrics';
 import { check, sleep } from 'k6';
-import { selectImageByDistribution } from '../common/utils.js';
+import {scenarioTestEnable, selectImageByDistribution} from '../common/utils.js';
 import { CONFIG } from '../config/config.js';
 const counterByTag = new Counter('counter_by_tag');
 
@@ -43,47 +43,69 @@ export function resizeTest() {
     sleep(1);
 }
 
-export const resizeOptions = {
-    resize_1200_test: {
-        executor: 'constant-arrival-rate',
-        rate: CONFIG.scenarios.resize.large.rate,
-        timeUnit: CONFIG.scenarios.resize.large.timeUnit,
-        preAllocatedVUs: CONFIG.scenarios.resize.large.preAllocatedVUs,
-        maxVUs: CONFIG.scenarios.resize.large.maxVUs,
-        duration: CONFIG.scenarios.resize.large.duration,
-        exec: 'resizeTest',
-        env: {
-            WIDTH: '1200',
-        },
-        tags: {test_type: 'resize', width: '1200'},
-    },
-    resize_800_test: {
-        executor: 'constant-arrival-rate',
-        rate: CONFIG.scenarios.resize.medium.rate,
-        timeUnit: CONFIG.scenarios.resize.medium.timeUnit,
-        preAllocatedVUs: CONFIG.scenarios.resize.medium.preAllocatedVUs,
-        maxVUs: CONFIG.scenarios.resize.medium.maxVUs,
-        duration: CONFIG.scenarios.resize.medium.duration,
-        exec: 'resizeTest',
-        env: {
-            WIDTH: '800',
-        },
-        tags: {test_type: 'resize', width: '800'}
-    },
-    resize_400_test: {
-        executor: 'constant-arrival-rate',
-        rate: CONFIG.scenarios.resize.small.rate,
-        timeUnit: CONFIG.scenarios.resize.small.timeUnit,
-        preAllocatedVUs: CONFIG.scenarios.resize.small.preAllocatedVUs,
-        maxVUs: CONFIG.scenarios.resize.small.maxVUs,
-        duration: CONFIG.scenarios.resize.small.duration,
-        exec: 'resizeTest',
-        env: {
-            WIDTH: '400',
-        },
-        tags: {test_type: 'resize', width: '400'},
-    },
-};
+function generateOptions() {
+    let options = {}
+
+    if (scenarioTestEnable(CONFIG.scenarios.resize.large)) {
+        options = {
+            ...options,
+            resize_1200_test: {
+                executor: 'constant-arrival-rate',
+                rate: CONFIG.scenarios.resize.large.rate,
+                timeUnit: CONFIG.scenarios.resize.large.timeUnit,
+                preAllocatedVUs: CONFIG.scenarios.resize.large.preAllocatedVUs,
+                maxVUs: CONFIG.scenarios.resize.large.maxVUs,
+                duration: CONFIG.scenarios.resize.large.duration,
+                exec: 'resizeTest',
+                env: {
+                    WIDTH: '1200',
+                },
+                tags: {test_type: 'resize', width: '1200'},
+            }
+        };
+    }
+
+    if (scenarioTestEnable(CONFIG.scenarios.resize.medium)) {
+        options = {
+            ...options,
+            resize_800_test: {
+                executor: 'constant-arrival-rate',
+                rate: CONFIG.scenarios.resize.medium.rate,
+                timeUnit: CONFIG.scenarios.resize.medium.timeUnit,
+                preAllocatedVUs: CONFIG.scenarios.resize.medium.preAllocatedVUs,
+                maxVUs: CONFIG.scenarios.resize.medium.maxVUs,
+                duration: CONFIG.scenarios.resize.medium.duration,
+                exec: 'resizeTest',
+                env: {
+                    WIDTH: '800',
+                },
+                tags: {test_type: 'resize', width: '800'}
+            }
+        };
+    }
+
+    if (scenarioTestEnable(CONFIG.scenarios.resize.small)) {
+        options = {
+            ...options,
+            resize_400_test: {
+                executor: 'constant-arrival-rate',
+                rate: CONFIG.scenarios.resize.small.rate,
+                timeUnit: CONFIG.scenarios.resize.small.timeUnit,
+                preAllocatedVUs: CONFIG.scenarios.resize.small.preAllocatedVUs,
+                maxVUs: CONFIG.scenarios.resize.small.maxVUs,
+                duration: CONFIG.scenarios.resize.small.duration,
+                exec: 'resizeTest',
+                env: {
+                    WIDTH: '400',
+                },
+                tags: {test_type: 'resize', width: '400'},
+            }
+        };
+    }
+    return options;
+}
+
+export const resizeOptions = generateOptions();
 
 export const resizeThresholds = {
     'http_req_failed': ['rate<0.01'],

@@ -1,8 +1,8 @@
 import http from 'k6/http';
 import { Counter } from 'k6/metrics';
 import { check, sleep } from 'k6';
-import {getRandomElement, selectImageByDistribution} from '../common/utils.js';
-import { CONFIG } from '../config/config.js';
+import {getRandomElement, scenarioTestEnable, selectImageByDistribution} from '../common/utils.js';
+import { CONFIG, SUMMARY_TREND_STATS } from '../config/config.js';
 const counterByTag = new Counter('counter_by_tag');
 
 function getExpectedResponseTime(width) {
@@ -48,47 +48,69 @@ export function resizeFormatTest() {
     sleep(1);
 }
 
-export const resizeFormatOptions = {
-    resizeFormat_1200_test: {
-        executor: 'constant-arrival-rate',
-        rate: CONFIG.scenarios.resizeFormat.large.rate,
-        timeUnit: CONFIG.scenarios.resizeFormat.large.timeUnit,
-        preAllocatedVUs: CONFIG.scenarios.resizeFormat.large.preAllocatedVUs,
-        maxVUs: CONFIG.scenarios.resizeFormat.large.maxVUs,
-        duration: CONFIG.scenarios.resizeFormat.large.duration,
-        exec: 'resizeFormatTest',
-        env: {
-            WIDTH: '1200',
-        },
-        tags: {test_type: 'resizeFormat', width: '1200'},
-    },
-    resizeFormat_800_test: {
-        executor: 'constant-arrival-rate',
-        rate: CONFIG.scenarios.resizeFormat.medium.rate,
-        timeUnit: CONFIG.scenarios.resizeFormat.medium.timeUnit,
-        preAllocatedVUs: CONFIG.scenarios.resizeFormat.medium.preAllocatedVUs,
-        maxVUs: CONFIG.scenarios.resizeFormat.medium.maxVUs,
-        duration: CONFIG.scenarios.resizeFormat.medium.duration,
-        exec: 'resizeFormatTest',
-        env: {
-            WIDTH: '800',
-        },
-        tags: {test_type: 'resizeFormat', width: '800'}
-    },
-    resizeFormat_400_test: {
-        executor: 'constant-arrival-rate',
-        rate: CONFIG.scenarios.resizeFormat.small.rate,
-        timeUnit: CONFIG.scenarios.resizeFormat.small.timeUnit,
-        preAllocatedVUs: CONFIG.scenarios.resizeFormat.small.preAllocatedVUs,
-        maxVUs: CONFIG.scenarios.resizeFormat.small.maxVUs,
-        duration: CONFIG.scenarios.resizeFormat.small.duration,
-        exec: 'resizeFormatTest',
-        env: {
-            WIDTH: '400',
-        },
-        tags: {test_type: 'resizeFormat', width: '400'},
+function generateOptions() {
+    let options = {};
+
+    if (scenarioTestEnable(CONFIG.scenarios.resizeFormat.large)) {
+        options = {
+            ...options,
+            resizeFormat_1200_test: {
+                executor: 'constant-arrival-rate',
+                rate: CONFIG.scenarios.resizeFormat.large.rate,
+                timeUnit: CONFIG.scenarios.resizeFormat.large.timeUnit,
+                preAllocatedVUs: CONFIG.scenarios.resizeFormat.large.preAllocatedVUs,
+                maxVUs: CONFIG.scenarios.resizeFormat.large.maxVUs,
+                duration: CONFIG.scenarios.resizeFormat.large.duration,
+                exec: 'resizeFormatTest',
+                env: {
+                    WIDTH: '1200',
+                },
+                tags: {test_type: 'resizeFormat', width: '1200'},
+            }
+        };
     }
-};
+
+    if (scenarioTestEnable(CONFIG.scenarios.resizeFormat.medium)) {
+        options = {
+            ...options,
+            resizeFormat_800_test: {
+                executor: 'constant-arrival-rate',
+                rate: CONFIG.scenarios.resizeFormat.medium.rate,
+                timeUnit: CONFIG.scenarios.resizeFormat.medium.timeUnit,
+                preAllocatedVUs: CONFIG.scenarios.resizeFormat.medium.preAllocatedVUs,
+                maxVUs: CONFIG.scenarios.resizeFormat.medium.maxVUs,
+                duration: CONFIG.scenarios.resizeFormat.medium.duration,
+                exec: 'resizeFormatTest',
+                env: {
+                    WIDTH: '800',
+                },
+                tags: {test_type: 'resizeFormat', width: '800'}
+            }
+        };
+    }
+
+    if (scenarioTestEnable(CONFIG.scenarios.resizeFormat.small)) {
+        options = {
+            ...options,
+            resizeFormat_400_test: {
+                executor: 'constant-arrival-rate',
+                rate: CONFIG.scenarios.resizeFormat.small.rate,
+                timeUnit: CONFIG.scenarios.resizeFormat.small.timeUnit,
+                preAllocatedVUs: CONFIG.scenarios.resizeFormat.small.preAllocatedVUs,
+                maxVUs: CONFIG.scenarios.resizeFormat.small.maxVUs,
+                duration: CONFIG.scenarios.resizeFormat.small.duration,
+                exec: 'resizeFormatTest',
+                env: {
+                    WIDTH: '400',
+                },
+                tags: {test_type: 'resizeFormat', width: '400'},
+            }
+        };
+    }
+    return options;
+}
+
+export const resizeFormatOptions = generateOptions();
 
 export const resizeFormatThresholds = {
     'http_req_failed': ['rate<0.01'],
@@ -107,10 +129,11 @@ export const resizeFormatThresholds = {
 }
 
 export const options = {
-    summaryTrendStats: ['min', 'avg', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'],
+    summaryTrendStats: SUMMARY_TREND_STATS,
     scenarios: {
-        resizeFormat_only: resizeFormatOptions
-    }
+        ...resizeFormatOptions
+    },
+    thresholds: resizeFormatThresholds,
 };
 
 export default resizeFormatTest;

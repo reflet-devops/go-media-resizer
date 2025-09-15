@@ -3,15 +3,20 @@ package transform
 import (
 	"bytes"
 	"fmt"
-	"github.com/disintegration/imaging"
-	"github.com/gen2brain/avif"
-	"github.com/kolesa-team/go-webp/webp"
-	"github.com/reflet-devops/go-media-resizer/types"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
 	"slices"
+
+	"github.com/disintegration/imaging"
+	"github.com/gen2brain/avif"
+	"github.com/kolesa-team/go-webp/webp"
+	"github.com/reflet-devops/go-media-resizer/types"
+)
+
+var (
+	DefaultOptionAvif = avif.Options{Speed: avif.DefaultSpeed, Quality: avif.DefaultQuality}
 )
 
 func Transform(file *bytes.Buffer, opts *types.ResizeOption) error {
@@ -69,7 +74,7 @@ func Format(buffer *bytes.Buffer, img image.Image, opts *types.ResizeOption) err
 
 	if slices.Contains([]string{types.TypeAVIF, types.TypeWEBP}, opts.Format) {
 		if opts.Format == types.TypeAVIF {
-			errFormat = avif.Encode(buffer, img, avif.Options{Speed: avif.DefaultSpeed, Quality: avif.DefaultQuality})
+			errFormat = avif.Encode(buffer, img, DefaultOptionAvif)
 		} else if opts.Format == types.TypeWEBP {
 			errFormat = webp.Encode(buffer, img, nil)
 		}
