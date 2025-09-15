@@ -1,7 +1,7 @@
 import http from 'k6/http';
 import { Counter } from 'k6/metrics';
 import { check, sleep } from 'k6';
-import {getRandomElement, selectImageByDistribution} from '../common/utils.js';
+import {getRandomElement, selectImageByDistribution, scenarioTestEnable} from '../common/utils.js';
 import { CONFIG, SUMMARY_TREND_STATS } from '../config/config.js';
 const counterByTag = new Counter('counter_by_tag');
 
@@ -58,47 +58,70 @@ export function cdnCgiTest() {
 //     exec: 'cdnCgiTest'
 // };
 
-export const cdnCgiOptions = {
-    cdnCgi_1200_test: {
-        executor: 'constant-arrival-rate',
-        rate: CONFIG.scenarios.cdnCgi.large.rate,
-        timeUnit: CONFIG.scenarios.cdnCgi.large.timeUnit,
-        preAllocatedVUs: CONFIG.scenarios.cdnCgi.large.preAllocatedVUs,
-        maxVUs: CONFIG.scenarios.cdnCgi.large.maxVUs,
-        duration: CONFIG.scenarios.cdnCgi.large.duration,
-        exec: 'cdnCgiTest',
-        env: {
-            WIDTH: '1200',
-        },
-        tags: {test_type: 'cdnCgi', width: '1200'},
-    },
-    cdnCgi_800_test: {
-        executor: 'constant-arrival-rate',
-        rate: CONFIG.scenarios.cdnCgi.medium.rate,
-        timeUnit: CONFIG.scenarios.cdnCgi.medium.timeUnit,
-        preAllocatedVUs: CONFIG.scenarios.cdnCgi.medium.preAllocatedVUs,
-        maxVUs: CONFIG.scenarios.cdnCgi.medium.maxVUs,
-        duration: CONFIG.scenarios.cdnCgi.medium.duration,
-        exec: 'cdnCgiTest',
-        env: {
-            WIDTH: '800',
-        },
-        tags: {test_type: 'cdnCgi', width: '800'}
-    },
-    cdnCgi_400_test: {
-        executor: 'constant-arrival-rate',
-        rate: CONFIG.scenarios.cdnCgi.small.rate,
-        timeUnit: CONFIG.scenarios.cdnCgi.small.timeUnit,
-        preAllocatedVUs: CONFIG.scenarios.cdnCgi.small.preAllocatedVUs,
-        maxVUs: CONFIG.scenarios.cdnCgi.small.maxVUs,
-        duration: CONFIG.scenarios.cdnCgi.small.duration,
-        exec: 'cdnCgiTest',
-        env: {
-            WIDTH: '400',
-        },
-        tags: {test_type: 'cdnCgi', width: '400'},
-    }
+function generateOptions() {
+    let options = {};
+
+   if  (scenarioTestEnable(CONFIG.scenarios.cdnCgi.large)) {
+       options = {
+           ...options,
+           cdnCgi_1200_test: {
+               executor: 'constant-arrival-rate',
+               rate: CONFIG.scenarios.cdnCgi.large.rate,
+               timeUnit: CONFIG.scenarios.cdnCgi.large.timeUnit,
+               preAllocatedVUs: CONFIG.scenarios.cdnCgi.large.preAllocatedVUs,
+               maxVUs: CONFIG.scenarios.cdnCgi.large.maxVUs,
+               duration: CONFIG.scenarios.cdnCgi.large.duration,
+               exec: 'cdnCgiTest',
+               env: {
+                   WIDTH: '1200',
+               },
+               tags: {test_type: 'cdnCgi', width: '1200'},
+           },
+       };
+   }
+
+   if  (scenarioTestEnable(CONFIG.scenarios.cdnCgi.medium)) {
+       options = {
+           ...options,
+           cdnCgi_800_test: {
+               executor: 'constant-arrival-rate',
+               rate: CONFIG.scenarios.cdnCgi.medium.rate,
+               timeUnit: CONFIG.scenarios.cdnCgi.medium.timeUnit,
+               preAllocatedVUs: CONFIG.scenarios.cdnCgi.medium.preAllocatedVUs,
+               maxVUs: CONFIG.scenarios.cdnCgi.medium.maxVUs,
+               duration: CONFIG.scenarios.cdnCgi.medium.duration,
+               exec: 'cdnCgiTest',
+               env: {
+                   WIDTH: '800',
+               },
+               tags: {test_type: 'cdnCgi', width: '800'}
+           },
+       };
+   }
+
+   if  (scenarioTestEnable(CONFIG.scenarios.cdnCgi.small)) {
+       options = {
+           ...options,
+           cdnCgi_400_test: {
+               executor: 'constant-arrival-rate',
+               rate: CONFIG.scenarios.cdnCgi.small.rate,
+               timeUnit: CONFIG.scenarios.cdnCgi.small.timeUnit,
+               preAllocatedVUs: CONFIG.scenarios.cdnCgi.small.preAllocatedVUs,
+               maxVUs: CONFIG.scenarios.cdnCgi.small.maxVUs,
+               duration: CONFIG.scenarios.cdnCgi.small.duration,
+               exec: 'cdnCgiTest',
+               env: {
+                   WIDTH: '400',
+               },
+               tags: {test_type: 'cdnCgi', width: '400'},
+           }
+       };
+   }
+
+    return options;
 }
+
+export const cdnCgiOptions = generateOptions();
 
 export const cdnCgiThresholds = {
     'http_req_failed': ['rate<0.01'], // Less than 1% failures

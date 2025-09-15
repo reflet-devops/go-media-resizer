@@ -25,3 +25,10 @@ export function getRandomWidth() {
     const widths = ['1200', '800', '400'];
     return getRandomElement(widths);
 }
+
+export function scenarioTestEnable(scenarioConfig) {
+    if ("enable" in scenarioConfig) {
+        return Boolean(scenarioConfig.enable);
+    }
+    return true;
+}

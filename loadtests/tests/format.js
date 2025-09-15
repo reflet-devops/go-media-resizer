@@ -1,9 +1,9 @@
 import http from 'k6/http';
-import { Counter } from 'k6/metrics';
-import { check, sleep } from 'k6';
-import { getRandomElement } from '../common/utils.js';
-import { mediumImages } from '../common/utils.js';
+import {Counter} from 'k6/metrics';
+import {check, sleep} from 'k6';
+import {getRandomElement, mediumImages, scenarioTestEnable} from '../common/utils.js';
 import {CONFIG, SUMMARY_TREND_STATS} from '../config/config.js';
+
 const counterByTag = new Counter('counter_by_tag');
 
 export function formatTest() {
@@ -36,34 +36,51 @@ export function formatTest() {
     sleep(1);
 }
 
-export const formatOptions = {
-    format_avif_test: {
-        executor: 'constant-arrival-rate',
-        rate: CONFIG.scenarios.format.avif.rate,
-        timeUnit: CONFIG.scenarios.format.avif.timeUnit,
-        preAllocatedVUs: CONFIG.scenarios.format.avif.preAllocatedVUs,
-        maxVUs: CONFIG.scenarios.format.avif.maxVUs,
-        duration: CONFIG.scenarios.format.avif.duration,
-        exec: 'formatTest',
-        env: {
-            FORMAT: 'avif',
-        },
-        tags: {test_type: 'format', format: 'avif'},
-    },
-    format_webp_test: {
-        executor: 'constant-arrival-rate',
-        rate: CONFIG.scenarios.format.webp.rate,
-        timeUnit: CONFIG.scenarios.format.webp.timeUnit,
-        preAllocatedVUs: CONFIG.scenarios.format.webp.preAllocatedVUs,
-        maxVUs: CONFIG.scenarios.format.webp.maxVUs,
-        duration: CONFIG.scenarios.format.webp.duration,
-        exec: 'formatTest',
-        env: {
-            FORMAT: 'webp',
-        },
-        tags: {test_type: 'format', format: 'webp'},
-    },
-};
+function generateOptions() {
+    let options = {}
+
+    if (scenarioTestEnable(CONFIG.scenarios.format.avif)) {
+        options = {
+            ...options,
+            format_avif_test: {
+                executor: 'constant-arrival-rate',
+                rate: CONFIG.scenarios.format.avif.rate,
+                timeUnit: CONFIG.scenarios.format.avif.timeUnit,
+                preAllocatedVUs: CONFIG.scenarios.format.avif.preAllocatedVUs,
+                maxVUs: CONFIG.scenarios.format.avif.maxVUs,
+                duration: CONFIG.scenarios.format.avif.duration,
+                exec: 'formatTest',
+                env: {
+                    FORMAT: 'avif',
+                },
+                tags: {test_type: 'format', format: 'avif'},
+            }
+        };
+    }
+
+    if (scenarioTestEnable(CONFIG.scenarios.format.webp)) {
+        options = {
+            ...options,
+            format_webp_test: {
+                executor: 'constant-arrival-rate',
+                rate: CONFIG.scenarios.format.webp.rate,
+                timeUnit: CONFIG.scenarios.format.webp.timeUnit,
+                preAllocatedVUs: CONFIG.scenarios.format.webp.preAllocatedVUs,
+                maxVUs: CONFIG.scenarios.format.webp.maxVUs,
+                duration: CONFIG.scenarios.format.webp.duration,
+                exec: 'formatTest',
+                env: {
+                    FORMAT: 'webp',
+                },
+                tags: {test_type: 'format', format: 'webp'},
+            }
+        };
+    }
+
+    return options;
+}
+
+export const formatOptions = generateOptions();
 
 export const formatThresholds = {
     'http_req_failed': ['rate<0.01'],
