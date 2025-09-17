@@ -37,11 +37,15 @@ func (f fs) Type() string {
 
 func (f fs) NotifyFileChange(_ chan types.Events) {}
 
-func (f fs) GetFile(path string) (io.Reader, error) {
+func (f fs) GetFile(path string) (io.ReadCloser, error) {
 	if f.cfg.PrefixPath != "" {
 		path = filepath.Join(f.cfg.PrefixPath, path)
 	}
-	return f.fs.Open(path)
+	object, err := f.fs.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	return object, err
 }
 
 func createFsStorage(ctx *context.Context, cfg config.StorageConfig) (types.Storage, error) {

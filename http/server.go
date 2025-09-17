@@ -1,11 +1,13 @@
 package http
 
 import (
-	"crypto/subtle"
 	"fmt"
-	"github.com/labstack/echo-contrib/echoprometheus"
+	"io"
+	"net"
+	"net/http"
+	"os"
+
 	"github.com/labstack/echo/v4"
-	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	"github.com/reflet-devops/go-media-resizer/cache_purge"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
@@ -16,10 +18,6 @@ import (
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"github.com/reflet-devops/go-media-resizer/storage"
 	"github.com/reflet-devops/go-media-resizer/types"
-	"io"
-	"net"
-	"net/http"
-	"os"
 )
 
 type Host struct {
@@ -31,7 +29,7 @@ func CreateServerHTTP(ctx *context.Context) (*echo.Echo, error) {
 	e.Logger.SetOutput(os.Stdout)
 
 	if ctx.Config.HTTP.Metrics.Enable {
-		configureMetrics(ctx, e)
+		middleware.ConfigurePrometheusMiddleware(ctx, e)
 	}
 
 	extractorTrustOptions, err := getExtractorTrustOptions(ctx)
@@ -43,7 +41,7 @@ func CreateServerHTTP(ctx *context.Context) (*echo.Echo, error) {
 		extractorTrustOptions...,
 	)
 
-	e.Use(echoMiddleware.RequestID())
+	middleware.ConfigureRequestIdMiddleware(e)
 	err = middleware.ConfigureAccessLogMiddleware(e, ctx)
 	if err != nil {
 		return nil, fmt.Errorf("can't set access log middleware: %v", err)
@@ -149,35 +147,6 @@ func initRouter(ctx *context.Context, cfg *config.Config) (map[string]*Host, err
 
 	}
 	return hosts, nil
-}
-
-func configureMetrics(ctx *context.Context, e *echo.Echo) {
-	metricsCfg := ctx.Config.HTTP.Metrics
-
-	e.Use(echoprometheus.NewMiddlewareWithConfig(echoprometheus.MiddlewareConfig{
-		Registerer: ctx.MetricsRegistry,
-	}))
-
-	basicAuthMid := func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			return next(c)
-		}
-	}
-
-	if metricsCfg.BasicAuth.Enable() {
-		basicAuthMid = echoMiddleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
-			// Be careful to use constant time comparison to prevent timing attacks
-			if subtle.ConstantTimeCompare([]byte(username), []byte(metricsCfg.BasicAuth.Username)) == 1 &&
-				subtle.ConstantTimeCompare([]byte(password), []byte(metricsCfg.BasicAuth.Password)) == 1 {
-				return true, nil
-			}
-			return false, nil
-		})
-	}
-
-	e.GET(route.MetricsRoute, echoprometheus.NewHandlerWithConfig(echoprometheus.HandlerConfig{
-		Gatherer: ctx.MetricsRegistry,
-	}), basicAuthMid)
 }
 
 func listenFileChange(ctx *context.Context, chanEvents chan types.Events, purgeCaches []types.PurgeCache, storageInstance types.Storage) {

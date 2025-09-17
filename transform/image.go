@@ -3,31 +3,35 @@ package transform
 import (
 	"bytes"
 	"fmt"
-	"github.com/Kagami/go-avif"
-	"github.com/disintegration/imaging"
-	"github.com/kolesa-team/go-webp/webp"
-	"github.com/reflet-devops/go-media-resizer/types"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-	"io"
 	"slices"
+
+	"github.com/disintegration/imaging"
+	"github.com/gen2brain/avif"
+	"github.com/kolesa-team/go-webp/webp"
+	"github.com/reflet-devops/go-media-resizer/types"
 )
 
-func Transform(file io.Reader, opts *types.ResizeOption) (io.Reader, error) {
+var (
+	DefaultOptionAvif = avif.Options{Speed: avif.DefaultSpeed, Quality: avif.DefaultQuality}
+)
+
+func Transform(file *bytes.Buffer, opts *types.ResizeOption) error {
 	if !opts.NeedTransform() {
-		return file, nil
+		return nil
 	}
 
 	img, _, errDecode := image.Decode(file)
 	if errDecode != nil {
-		return nil, fmt.Errorf("failed to decode image %s: %w", opts.Source, errDecode)
+		return fmt.Errorf("failed to decode image %s: %w", opts.Source, errDecode)
 	}
 
 	if opts.NeedResize() {
 		if opts.Fit == types.TypeFitCrop && (opts.Width == 0 || opts.Height == 0) {
-			return nil, fmt.Errorf("cannot crop without width and height")
+			return fmt.Errorf("cannot crop without width and height")
 		}
 		img = Resize(img, opts)
 	}
@@ -36,12 +40,11 @@ func Transform(file io.Reader, opts *types.ResizeOption) (io.Reader, error) {
 		img = Adjust(img, opts)
 	}
 
-	imgFormated, errFormat := Format(img, opts)
+	errFormat := Format(file, img, opts)
 	if errFormat != nil {
-		return nil, fmt.Errorf("failed to format image %s: %w", opts.Source, errFormat)
+		return fmt.Errorf("failed to format image %s: %w", opts.Source, errFormat)
 	}
-
-	return imgFormated, nil
+	return nil
 }
 
 func Resize(img image.Image, opts *types.ResizeOption) image.Image {
@@ -66,32 +69,31 @@ func Adjust(img image.Image, opts *types.ResizeOption) image.Image {
 	return img
 }
 
-func Format(img image.Image, opts *types.ResizeOption) (io.Reader, error) {
+func Format(buffer *bytes.Buffer, img image.Image, opts *types.ResizeOption) error {
 	var errFormat error
-	w := &bytes.Buffer{}
 
 	if slices.Contains([]string{types.TypeAVIF, types.TypeWEBP}, opts.Format) {
 		if opts.Format == types.TypeAVIF {
-			errFormat = avif.Encode(w, img, &avif.Options{Speed: 8, Quality: 60})
+			errFormat = avif.Encode(buffer, img, DefaultOptionAvif)
 		} else if opts.Format == types.TypeWEBP {
-			errFormat = webp.Encode(w, img, nil)
+			errFormat = webp.Encode(buffer, img, nil)
 		}
 
 	} else if slices.Contains([]string{types.TypeJPEG, types.TypePNG}, opts.Format) {
 		format, errFindFormat := imaging.FormatFromExtension(opts.OriginFormat)
 		if errFindFormat != nil {
-			return nil, fmt.Errorf("failed to find format from %s: %w", opts.Source, errFindFormat)
+			return fmt.Errorf("failed to find format from %s: %w", opts.Source, errFindFormat)
 		}
 
 		if opts.OriginFormat == types.TypeJPEG && opts.Quality != 0 {
 			optsEncode := imaging.JPEGQuality(opts.Quality)
-			errFormat = imaging.Encode(w, img, format, optsEncode)
+			errFormat = imaging.Encode(buffer, img, format, optsEncode)
 		} else {
-			errFormat = imaging.Encode(w, img, format)
+			errFormat = imaging.Encode(buffer, img, format)
 		}
 	} else {
-		return nil, fmt.Errorf("unsupported format: %s", opts.Format)
+		return fmt.Errorf("unsupported format: %s", opts.Format)
 	}
 
-	return w, errFormat
+	return errFormat
 }

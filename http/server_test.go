@@ -3,6 +3,15 @@ package http
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"slices"
+	"testing"
+	"time"
+
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
@@ -12,14 +21,6 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-	"io"
-	"log/slog"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"slices"
-	"testing"
-	"time"
 )
 
 func Test_CreateServerHTTP_Success(t *testing.T) {
@@ -44,7 +45,7 @@ func Test_CreateServerHTTP_Success(t *testing.T) {
 	assert.Equal(t, os.Stdout, e.Logger.Output())
 }
 
-func Test_CreateServerHTTP_MidllewareLogger_Fail(t *testing.T) {
+func Test_CreateServerHTTP_MiddlewareLogger_Fail(t *testing.T) {
 	ctx := context.TestContext(nil)
 	ctx.Config.HTTP.AccessLogPath = "/path/log.txt"
 	ctx.Fs = afero.NewReadOnlyFs(ctx.Fs)
@@ -334,66 +335,6 @@ func Test_initRouter_CreateStorage_Fail(t *testing.T) {
 
 	_, err := initRouter(ctx, ctx.Config)
 	assert.Error(t, err)
-}
-
-func Test_configureMetrics(t *testing.T) {
-	username := "foo"
-	password := "bar"
-
-	tests := []struct {
-		name     string
-		username string
-		password string
-		checkFn  func(t *testing.T, rec *httptest.ResponseRecorder)
-	}{
-		{
-			name:     "successValidBasicAuth",
-			username: username,
-			password: password,
-			checkFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
-				assert.Equal(t, http.StatusOK, rec.Code)
-				assert.NotEmpty(t, rec.Body.String())
-			},
-		},
-		{
-			name:     "failedInvalidBasicAuthUsername",
-			username: "wrong",
-			password: password,
-			checkFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
-				assert.Equal(t, http.StatusUnauthorized, rec.Code)
-				assert.Equal(t, "basic realm=Restricted", rec.Header().Get("WWW-Authenticate"))
-			},
-		},
-		{
-			name:     "failedInvalidBasicAuthPassword",
-			username: username,
-			password: "wrong",
-			checkFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
-				assert.Equal(t, http.StatusUnauthorized, rec.Code)
-				assert.Equal(t, "basic realm=Restricted", rec.Header().Get("WWW-Authenticate"))
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.TestContext(nil)
-			ctx.Config.HTTP.Metrics.Enable = true
-			ctx.Config.HTTP.Metrics.BasicAuth.Username = username
-			ctx.Config.HTTP.Metrics.BasicAuth.Password = password
-
-			e := echo.New()
-			e.HideBanner = true
-			e.HidePort = true
-			req := httptest.NewRequest(http.MethodGet, route.MetricsRoute, nil)
-			req.Host = "127.0.0.1"
-			req.SetBasicAuth(tt.username, tt.password)
-			rec := httptest.NewRecorder()
-
-			configureMetrics(ctx, e)
-			e.ServeHTTP(rec, req)
-			tt.checkFn(t, rec)
-		})
-	}
 }
 
 func Test_listenFileChange_Success(t *testing.T) {

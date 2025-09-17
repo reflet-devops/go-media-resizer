@@ -3,20 +3,22 @@ package cli
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/reflet-devops/go-media-resizer/config"
-	"github.com/reflet-devops/go-media-resizer/context"
-	"github.com/reflet-devops/go-media-resizer/parser"
-	"github.com/reflet-devops/go-media-resizer/types"
-	"github.com/valyala/fasthttp"
 	"reflect"
 	"regexp"
 	"slices"
 	"strings"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"github.com/reflet-devops/go-media-resizer/config"
+	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/parser"
+	"github.com/reflet-devops/go-media-resizer/types"
+	"github.com/valyala/fasthttp"
+
 	"log/slog"
 	"path"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -200,15 +202,16 @@ func validRegexTest(project config.Project, endpoint config.Endpoint) error {
 	}
 
 	for _, test := range endpoint.RegexTests {
-		opts, err := parser.ParseOption(&endpoint, &project, test.Path)
+		opts := &types.ResizeOption{}
+		found, err := parser.ParseOption(&endpoint, &project, test.Path, opts)
 		if err != nil {
 			return fmt.Errorf("fail to validate RegexTest %s with error: %v", test.Path, err)
 		}
 
-		if opts == nil {
+		if !found {
 			return fmt.Errorf("fail to validate RegexTest %s path not match", test.Path)
 		}
-
+		opts.Headers = nil
 		if !reflect.DeepEqual(opts, &test.ResultOpts) {
 			return fmt.Errorf("fail to validate RegexTest %s excepted: %v, actual: %v", test.Path, &test.ResultOpts, opts)
 		}

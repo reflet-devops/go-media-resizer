@@ -5,8 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/Kagami/go-avif"
 	"github.com/disintegration/imaging"
+	"github.com/gen2brain/avif"
 	"github.com/kolesa-team/go-webp/webp"
 	"github.com/reflet-devops/go-media-resizer/hash"
 	"github.com/reflet-devops/go-media-resizer/types"
@@ -131,7 +131,7 @@ func TestFormat(t *testing.T) {
 
 				img, _, err := image.Decode(file)
 				assert.NoError(t, err)
-				err = avif.Encode(w, img, &avif.Options{Speed: 8, Quality: 60})
+				err = avif.Encode(w, img, avif.Options{Speed: avif.DefaultSpeed, Quality: avif.DefaultQuality})
 				assert.NoError(t, err)
 
 				shaSum, err := hash.GenerateSHA256(w)
@@ -214,10 +214,10 @@ func TestFormat(t *testing.T) {
 			assert.NoError(t, errOpen)
 			img, _, errDecode := image.Decode(file)
 			assert.NoError(t, errDecode)
-
-			got, err := Format(img, tt.opts)
+			got := &bytes.Buffer{}
+			err := Format(got, img, tt.opts)
 			tt.wantErr(t, err)
-			if got != nil {
+			if got.Len() > 0 {
 				hasher := sha256.New()
 				_, err = io.Copy(hasher, got)
 				assert.NoError(t, err)
@@ -233,7 +233,7 @@ func TestTransform(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		file    io.Reader
+		file    io.ReadCloser
 		opts    *types.ResizeOption
 		wantFn  func() string
 		wantErr assert.ErrorAssertionFunc
@@ -241,7 +241,7 @@ func TestTransform(t *testing.T) {
 		{
 			name:    "successNothingToDo",
 			opts:    &types.ResizeOption{Format: types.TypeText, OriginFormat: types.TypeText},
-			file:    strings.NewReader("unknown"),
+			file:    io.NopCloser(strings.NewReader("unknown")),
 			wantFn:  func() string { return "b23a6a8439c0dde5515893e7c90c1e3233b8616e634470f20dc4928bcf3609bc" },
 			wantErr: assert.NoError,
 		},
@@ -264,7 +264,7 @@ func TestTransform(t *testing.T) {
 		},
 		{
 			name:    "failedToDecode",
-			file:    strings.NewReader("unknown"),
+			file:    io.NopCloser(strings.NewReader("unknown")),
 			opts:    &types.ResizeOption{Format: types.TypeJPEG, OriginFormat: types.TypeJPEG, Width: 100},
 			wantErr: assert.Error,
 		},
@@ -277,18 +277,19 @@ func TestTransform(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var errOpen error
-			var file io.Reader
+			var file io.ReadCloser
 			file, errOpen = os.Open(path)
 			assert.NoError(t, errOpen)
 			if tt.file != nil {
 				file = tt.file
 			}
-
-			got, err := Transform(file, tt.opts)
+			got := &bytes.Buffer{}
+			_, _ = io.Copy(got, file)
+			err := Transform(got, tt.opts)
 			if !tt.wantErr(t, err, fmt.Sprintf("Transform(%v, %v)", file, tt.opts)) {
 				return
 			}
-			if got != nil {
+			if got.Len() > 0 {
 				hasher := sha256.New()
 				_, err = io.Copy(hasher, got)
 				assert.NoError(t, err)

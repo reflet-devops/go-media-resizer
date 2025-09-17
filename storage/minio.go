@@ -3,6 +3,14 @@ package storage
 import (
 	builtinCtx "context"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/jonboulle/clockwork"
 	libMinio "github.com/minio/minio-go/v7"
@@ -12,12 +20,6 @@ import (
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/types"
-	"io"
-	"os"
-	"strings"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 const (
@@ -81,18 +83,22 @@ func (m *minio) getFullPath(path string) string {
 	return strings.Join([]string{m.cfg.PrefixPath, path}, "/")
 }
 
-func (m *minio) GetFile(path string) (io.Reader, error) {
-	object, err := m.getClient().GetObject(builtinCtx.Background(), m.getCurrentBucketName(), m.getFullPath(path), libMinio.GetObjectOptions{})
+func (m *minio) GetFile(path string) (io.ReadCloser, error) {
+	opts := libMinio.GetObjectOptions{}
+
+	object, err := m.getClient().GetObject(builtinCtx.Background(), m.getCurrentBucketName(), m.getFullPath(path), opts)
 	if err != nil {
 		return nil, err
 	}
 
 	stat, errStat := object.Stat()
 	if errStat != nil {
+		_ = object.Close()
 		return nil, errStat
 	}
 
 	if stat.Size == 0 {
+		_ = object.Close()
 		return nil, os.ErrNotExist
 	}
 
@@ -287,12 +293,29 @@ func createMinioStorage(ctx *context.Context, cfg config.StorageConfig) (types.S
 }
 
 func createMinioClient(cfg ConfigClientMinio) (*libMinio.Client, error) {
+	// Highly optimized transport configuration for better performance
+	transport := &http.Transport{
+		MaxIdleConns:          200,               // Increased global max idle connections
+		MaxIdleConnsPerHost:   64,                // Increased max idle connections per host
+		MaxConnsPerHost:       100,               // Max connections per host (new)
+		IdleConnTimeout:       120 * time.Second, // Longer idle connection timeout
+		TLSHandshakeTimeout:   10 * time.Second,  // TLS handshake timeout
+		ResponseHeaderTimeout: 30 * time.Second,  // Response header timeout
+		ExpectContinueTimeout: 1 * time.Second,   // Expect continue timeout
+		DisableCompression:    false,             // Enable compression for better bandwidth
+		WriteBufferSize:       64 * 1024,         // Increased to 64KB write buffer
+		ReadBufferSize:        64 * 1024,         // Increased to 64KB read buffer
+		DisableKeepAlives:     false,             // Keep TCP connections alive
+		ForceAttemptHTTP2:     true,              // Force HTTP/2 when possible
+	}
+
 	return libMinio.New(
 		cfg.Endpoint,
 		&libMinio.Options{
 			Creds:        credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
 			Secure:       cfg.UseSSL,
 			BucketLookup: libMinio.BucketLookupAuto,
+			Transport:    transport,
 		},
 	)
 }

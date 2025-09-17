@@ -2,11 +2,12 @@ package parser
 
 import (
 	"fmt"
+	"regexp"
+	"testing"
+
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/stretchr/testify/assert"
-	"regexp"
-	"testing"
 )
 
 func Test_ParseOption(t *testing.T) {
@@ -18,6 +19,7 @@ func Test_ParseOption(t *testing.T) {
 		path       string
 
 		want    *types.ResizeOption
+		found   bool
 		wantErr assert.ErrorAssertionFunc
 	}{
 		{
@@ -26,6 +28,7 @@ func Test_ParseOption(t *testing.T) {
 			projectCfg: &config.Project{AcceptTypeFiles: []string{types.TypePNG}, Headers: types.Headers{"X-Custom": "foo"}},
 			path:       "/media/image.png",
 			want:       &types.ResizeOption{OriginFormat: types.TypePNG, Source: "/media/image.png", Headers: types.Headers{"X-Custom": "foo"}},
+			found:      true,
 			wantErr:    assert.NoError,
 		},
 		{
@@ -34,6 +37,7 @@ func Test_ParseOption(t *testing.T) {
 			projectCfg: &config.Project{AcceptTypeFiles: []string{types.TypePNG}, Headers: types.Headers{"X-Custom": "foo"}},
 			path:       "/media/image.png",
 			want:       &types.ResizeOption{OriginFormat: types.TypePNG, Source: "/media/image.png", Headers: types.Headers{"X-Custom": "foo"}},
+			found:      true,
 			wantErr:    assert.NoError,
 		},
 		{
@@ -41,7 +45,8 @@ func Test_ParseOption(t *testing.T) {
 			endpoint:   &config.Endpoint{Regex: "\\/(?<width>[0-9]{1,4})\\/(?<height>[0-9]{1,4})(?<source>.*)"},
 			projectCfg: &config.Project{AcceptTypeFiles: []string{types.TypePNG}},
 			path:       "/500/500/media/image.png",
-			want:       &types.ResizeOption{OriginFormat: types.TypePNG, Width: 500, Height: 500, Source: "/media/image.png"},
+			want:       &types.ResizeOption{OriginFormat: types.TypePNG, Width: 500, Height: 500, Source: "/media/image.png", Headers: types.Headers{}},
+			found:      true,
 			wantErr:    assert.NoError,
 		},
 		{
@@ -49,6 +54,7 @@ func Test_ParseOption(t *testing.T) {
 			endpoint:   &config.Endpoint{},
 			projectCfg: &config.Project{AcceptTypeFiles: []string{}},
 			path:       "/media/image.png",
+			found:      false,
 			wantErr:    assert.Error,
 		},
 		{
@@ -56,6 +62,7 @@ func Test_ParseOption(t *testing.T) {
 			endpoint:   &config.Endpoint{Regex: "/media/wrong/(?<source>.*)"},
 			projectCfg: &config.Project{AcceptTypeFiles: []string{types.TypePNG}},
 			path:       "/media/image.png",
+			found:      false,
 			wantErr:    assert.NoError,
 		},
 	}
@@ -66,12 +73,15 @@ func Test_ParseOption(t *testing.T) {
 				assert.NoError(t, errReCompile)
 				tt.endpoint.CompiledRegex = compiledRegex
 			}
-
-			got, err := ParseOption(tt.endpoint, tt.projectCfg, tt.path)
+			got := &types.ResizeOption{}
+			found, err := ParseOption(tt.endpoint, tt.projectCfg, tt.path, got)
+			assert.Equal(t, tt.found, found)
 			if !tt.wantErr(t, err, fmt.Sprintf("ParseOption(%v, %v, %v)", tt.endpoint, tt.projectCfg, tt.path)) {
 				return
 			}
-			assert.Equalf(t, tt.want, got, "ParseOption(%v, %v, %v)", tt.endpoint, tt.projectCfg, tt.path)
+			if found {
+				assert.Equalf(t, tt.want, got, "ParseOption(%v, %v, %v)", tt.endpoint, tt.projectCfg, tt.path)
+			}
 		})
 	}
 }

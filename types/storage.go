@@ -6,6 +6,6 @@ import (
 
 type Storage interface {
 	//Type() string
-	GetFile(path string) (io.Reader, error)
+	GetFile(path string) (io.ReadCloser, error)
 	NotifyFileChange(chanEvent chan Events)
 }

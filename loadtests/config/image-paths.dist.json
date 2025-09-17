@@ -1,0 +1,36 @@
+{
+    "large": [
+        "/images/photo1-2400x1800.jpg",
+        "/images/landscape-3840x2160.jpg",
+        "/images/portrait-1920x2560.png",
+        "/images/wide-2560x1440.jpg",
+        "/images/ultra-4096x3072.png",
+        "/images/banner-2048x1024.jpg",
+        "/images/hd-1920x1080.jpg",
+        "/images/poster-1600x2400.png"
+    ],
+    "medium": [
+        "/images/photo2-1280x960.jpg",
+        "/images/standard-1024x768.jpg",
+        "/images/card-1200x800.png",
+        "/images/thumbnail-800x600.jpg",
+        "/images/preview-1000x750.png",
+        "/images/medium-900x600.jpg",
+        "/images/content-1100x825.png",
+        "/images/gallery-850x640.jpg",
+        "/images/blog-1080x720.png",
+        "/images/feature-950x713.jpg"
+    ],
+    "small": [
+        "/images/icon-64x64.png",
+        "/images/avatar-128x128.jpg",
+        "/images/thumb-200x150.jpg",
+        "/images/mini-300x200.png",
+        "/images/button-400x300.jpg",
+        "/images/small-480x360.png",
+        "/images/compact-600x400.jpg",
+        "/images/mobile-320x240.png",
+        "/images/tiny-150x100.jpg",
+        "/images/profile-256x256.png"
+    ]
+}
