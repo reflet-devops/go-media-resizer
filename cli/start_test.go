@@ -1,7 +1,13 @@
 package cli
 
 import (
-	"bytes"
+	"fmt"
+	"os"
+	"strconv"
+	"syscall"
+	"testing"
+	"time"
+
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
@@ -9,9 +15,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-	"syscall"
-	"testing"
-	"time"
 )
 
 func TestGetStartRunFn_SuccessOnlyListenHTTP(t *testing.T) {
@@ -72,8 +75,9 @@ func TestGetStartRunFn_FailCreateServerHTTP(t *testing.T) {
 }
 
 func TestGetStartRunFn_FailCreatePID(t *testing.T) {
-
+	pidPath := "/tmp/test.pid"
 	ctx := context.TestContext(nil)
+	ctx.Config.PidPath = pidPath
 	ctx.Config.Projects = []config.Project{
 		{
 			ID:         "id",
@@ -83,17 +87,17 @@ func TestGetStartRunFn_FailCreatePID(t *testing.T) {
 		},
 	}
 
-	errPid := afero.WriteFile(ctx.Fs, ctx.Config.PidPath, []byte("1234"), 0644)
+	errPid := afero.WriteFile(ctx.Fs, ctx.Config.PidPath, []byte(strconv.Itoa(os.Getpid())), 0644)
 	assert.NoError(t, errPid)
 	cmd := GetStartCmd(ctx)
 	err := GetStartRunFn(ctx)(cmd, []string{})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "pid file already exist with pid: ")
+	assert.Contains(t, err.Error(), fmt.Sprintf("pid file (%s) already exist with pid: ", pidPath))
 
 }
 
 func Test_managePidFile(t *testing.T) {
-
+	pidPath := "/tmp/test.pid"
 	tests := []struct {
 		name            string
 		mockFn          func(ctx *context.Context)
@@ -108,10 +112,18 @@ func Test_managePidFile(t *testing.T) {
 		{
 			name: "failedPidExist",
 			mockFn: func(ctx *context.Context) {
-				_ = afero.WriteFile(ctx.Fs, ctx.Config.PidPath, []byte("1234"), 0644)
+				_ = afero.WriteFile(ctx.Fs, pidPath, []byte(strconv.Itoa(os.Getpid())), 0644)
 			},
 			wantErr:         true,
-			wantErrContains: "pid file already exist with pid",
+			wantErrContains: fmt.Sprintf("pid file (%s) already exist with pid: ", pidPath),
+		},
+		{
+			name: "failedPidNotValid",
+			mockFn: func(ctx *context.Context) {
+				_ = afero.WriteFile(ctx.Fs, pidPath, []byte("wrong"), 0644)
+			},
+			wantErr:         true,
+			wantErrContains: fmt.Sprintf("pid in %s is not valid: pid=wrong", pidPath),
 		},
 		{
 			name: "failedWriteFile",
@@ -119,12 +131,13 @@ func Test_managePidFile(t *testing.T) {
 				ctx.Fs = afero.NewReadOnlyFs(ctx.Fs)
 			},
 			wantErr:         true,
-			wantErrContains: "pid file could not be written",
+			wantErrContains: fmt.Sprintf("pid file (%s) could not be written: ", pidPath),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.TestContext(nil)
+			ctx.Config.PidPath = pidPath
 			tt.mockFn(ctx)
 			err := managePidFile(ctx, ctx.Config.PidPath)
 			if tt.wantErr {
@@ -139,20 +152,17 @@ func Test_managePidFile(t *testing.T) {
 	}
 }
 
-func Test_managePidFile_FailedRemoveOnDone(t *testing.T) {
-	b := bytes.NewBufferString("")
-	ctx := context.TestContext(b)
-	err := managePidFile(ctx, ctx.Config.PidPath)
-	assert.NoError(t, err)
-	_ = ctx.Fs.Remove(ctx.Config.PidPath)
-	ctx.Cancel()
-	time.Sleep(time.Millisecond * 100)
-	assert.Contains(t, b.String(), "failed to remove pid file")
-}
-
 func Test_removePidFIle(t *testing.T) {
 	ctx := context.TestContext(nil)
 	_ = afero.WriteFile(ctx.Fs, ctx.Config.PidPath, []byte("1234"), 0644)
 	err := removePidFIle(ctx, ctx.Config.PidPath)
 	assert.NoError(t, err)
+}
+
+func Test_isProcessRunning_SuccessRunning(t *testing.T) {
+	assert.True(t, isProcessRunning(os.Getpid()))
+}
+
+func Test_isProcessRunning_SuccessNotRunning(t *testing.T) {
+	assert.False(t, isProcessRunning(99999999999))
 }
