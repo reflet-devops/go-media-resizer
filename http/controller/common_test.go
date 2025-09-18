@@ -18,69 +18,88 @@ import (
 func TestDetectFormatFromHeaderAccept(t *testing.T) {
 
 	tests := []struct {
-		name              string
-		acceptHeaderValue string
-		opts              *types.ResizeOption
-		want              *types.ResizeOption
+		name                 string
+		acceptHeaderValue    string
+		enableFormatAutoAVIF bool
+		opts                 *types.ResizeOption
+		want                 *types.ResizeOption
 	}{
 		{
-			name:              "detectFormatAvifWithAutoAndGoodAcceptHeader",
-			acceptHeaderValue: "image/avif,image/webp,image/png",
-			opts:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeFormatAuto},
-			want:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeAVIF},
+			name:                 "detectFormatAvifWithAutoAndGoodAcceptHeader",
+			acceptHeaderValue:    "image/avif,image/webp,image/png",
+			enableFormatAutoAVIF: true,
+			opts:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeFormatAuto},
+			want:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeAVIF},
 		},
 		{
-			name:              "detectFormatAvifWithAvifAndGoodAcceptHeader",
-			acceptHeaderValue: "image/avif,image/webp,image/png",
-			opts:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeAVIF},
-			want:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeAVIF},
+			name:                 "detectFormatWebpWithAutoAndAvifAcceptHeaderAndDisabledFormatAutoAVIF",
+			acceptHeaderValue:    "image/avif,image/webp,image/png",
+			enableFormatAutoAVIF: false,
+			opts:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeFormatAuto},
+			want:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeWEBP},
 		},
 		{
-			name:              "detectFormatAvifWithAvifAndWrongAcceptHeader",
-			acceptHeaderValue: "image/webp,image/png",
-			opts:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeAVIF},
-			want:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeWEBP},
+			name:                 "detectFormatAvifWithAvifAndGoodAcceptHeader",
+			enableFormatAutoAVIF: true,
+			acceptHeaderValue:    "image/avif,image/webp,image/png",
+			opts:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeAVIF},
+			want:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeAVIF},
 		},
 		{
-			name:              "detectFormatAvifWithAutoAndWrongAcceptHeader",
-			acceptHeaderValue: "image/webp,image/png",
-			opts:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeFormatAuto},
-			want:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeWEBP},
+			name:                 "detectFormatAvifWithAvifAndWrongAcceptHeader",
+			enableFormatAutoAVIF: true,
+			acceptHeaderValue:    "image/webp,image/png",
+			opts:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeAVIF},
+			want:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeWEBP},
 		},
 		{
-			name:              "detectFormatWebWithAutoAndGoodAcceptHeader",
-			acceptHeaderValue: "image/webp,image/png",
-			opts:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeFormatAuto},
-			want:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeWEBP},
+			name:                 "detectFormatAvifWithAutoAndWrongAcceptHeader",
+			enableFormatAutoAVIF: true,
+			acceptHeaderValue:    "image/webp,image/png",
+			opts:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeFormatAuto},
+			want:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeWEBP},
 		},
 		{
-			name:              "detectFormatWebWithWebpAndGoodAcceptHeader",
-			acceptHeaderValue: "image/webp,image/png",
-			opts:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeWEBP},
-			want:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeWEBP},
+			name:                 "detectFormatWebWithAutoAndGoodAcceptHeader",
+			enableFormatAutoAVIF: true,
+			acceptHeaderValue:    "image/webp,image/png",
+			opts:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeFormatAuto},
+			want:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeWEBP},
 		},
 		{
-			name:              "detectFormatWebWithWebpAndWrongAcceptHeader",
-			acceptHeaderValue: "image/png",
-			opts:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeWEBP},
-			want:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypePNG},
+			name:                 "detectFormatWebWithWebpAndGoodAcceptHeader",
+			enableFormatAutoAVIF: true,
+			acceptHeaderValue:    "image/webp,image/png",
+			opts:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeWEBP},
+			want:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeWEBP},
 		},
 		{
-			name:              "detectFormatWebWithAutoAndWrongAcceptHeader",
-			acceptHeaderValue: "image/png",
-			opts:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeFormatAuto},
-			want:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypePNG},
+			name:                 "detectFormatWebWithWebpAndWrongAcceptHeader",
+			enableFormatAutoAVIF: true,
+			acceptHeaderValue:    "image/png",
+			opts:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeWEBP},
+			want:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypePNG},
 		},
 		{
-			name:              "detectFormatPngWithAuto",
-			acceptHeaderValue: "image/png",
-			opts:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeFormatAuto},
-			want:              &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypePNG},
+			name:                 "detectFormatWebWithAutoAndWrongAcceptHeader",
+			enableFormatAutoAVIF: true,
+			acceptHeaderValue:    "image/png",
+			opts:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeFormatAuto},
+			want:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypePNG},
+		},
+		{
+			name:                 "detectFormatPngWithAuto",
+			enableFormatAutoAVIF: true,
+			acceptHeaderValue:    "image/png",
+			opts:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypeFormatAuto},
+			want:                 &types.ResizeOption{OriginFormat: types.TypePNG, Format: types.TypePNG},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			DetectFormatFromHeaderAccept(tt.acceptHeaderValue, tt.opts)
+			ctx := context.TestContext(nil)
+			ctx.Config.EnableFormatAutoAVIF = tt.enableFormatAutoAVIF
+			DetectFormatFromHeaderAccept(ctx, tt.acceptHeaderValue, tt.opts)
 			assert.Equal(t, tt.want, tt.opts)
 		})
 	}
@@ -88,6 +107,7 @@ func TestDetectFormatFromHeaderAccept(t *testing.T) {
 
 func TestSendStream(t *testing.T) {
 	ctx := context.TestContext(nil)
+	ctx.Config.EnableFormatAutoAVIF = true
 
 	tests := []struct {
 		name         string

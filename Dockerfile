@@ -4,8 +4,6 @@ ARG COMMIT_SHORT="snapshot"
 
 RUN apt-get update \
   && apt-get install --force-yes -y \
-  libaom-dev \
-  libavif-dev \
   libwebp-dev \
   pkg-config
 
@@ -13,9 +11,9 @@ RUN mkdir /app
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
-ENV LDFLAGS="-s -w -X github.com/reflet-devops/go-media-resizer/version.Version=${VERSION} -X github.com/reflet-devops/go-media-resizer/version.Commit=${COMMIT_SHORT}"
+ENV LDFLAGS=" -s -w -X github.com/reflet-devops/go-media-resizer/version.Version=${VERSION} -X github.com/reflet-devops/go-media-resizer/version.Commit=${COMMIT_SHORT}"
 COPY . .
-RUN CGO_ENABLED=1 go build -ldflags "${LDFLAGS}" -o go-media-resizer
+RUN CGO_ENABLED=1 go build -tags=nodynamic -ldflags "${LDFLAGS}" -o go-media-resizer
 
 FROM debian:12
 

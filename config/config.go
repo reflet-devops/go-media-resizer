@@ -1,23 +1,25 @@
 package config
 
 import (
-	"github.com/reflet-devops/go-media-resizer/types"
 	"regexp"
 	"time"
+
+	"github.com/reflet-devops/go-media-resizer/types"
 )
 
 const DefaultRequestTimeout = 2 * time.Second
 
 type Config struct {
-	HTTP            HTTPConfig      `mapstructure:"http" validate:"required"`
+	HTTP HTTPConfig `mapstructure:"http" validate:"required"`
 
-	PidPath string `mapstructure:"pid_path" validate:"required"`
-	AcceptTypeFiles []string        `mapstructure:"accept_type_files" validate:"required"`
-	ResizeTypeFiles []string        `mapstructure:"resize_type_files" validate:"required"`
-	ResizeCGI       ResizeCGIConfig `mapstructure:"resize_cgi"`
-	Headers         types.Headers   `mapstructure:"headers"`
-	RequestTimeout  time.Duration   `mapstructure:"request_timeout"`
-	Projects        []Project       `mapstructure:"projects" validate:"unique-project-cfg,required,unique=ID,min=1,dive"`
+	PidPath              string          `mapstructure:"pid_path" validate:"required"`
+	EnableFormatAutoAVIF bool            `mapstructure:"enable_format_auto_avif"`
+	AcceptTypeFiles      []string        `mapstructure:"accept_type_files" validate:"required"`
+	ResizeTypeFiles      []string        `mapstructure:"resize_type_files" validate:"required"`
+	ResizeCGI            ResizeCGIConfig `mapstructure:"resize_cgi"`
+	Headers              types.Headers   `mapstructure:"headers"`
+	RequestTimeout       time.Duration   `mapstructure:"request_timeout"`
+	Projects             []Project       `mapstructure:"projects" validate:"unique-project-cfg,required,unique=ID,min=1,dive"`
 }
 
 type Project struct {

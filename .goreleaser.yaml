@@ -12,8 +12,10 @@ builds:
       - linux
     goarch:
       - amd64
+    flags:
+      - "-tags=nodynamic"
     ldflags:
-      - "-s -w -X github.com/reflet-devops/go-media-resizer/version.Version={{.Tag}} -X github.com/reflet-devops/go-media-resizer/version.Commit={{.ShortCommit}}"
+      - " -s -w -X github.com/reflet-devops/go-media-resizer/version.Version={{.Tag}} -X github.com/reflet-devops/go-media-resizer/version.Commit={{.ShortCommit}}"
     binary: go-media-resizer
     env:
       - CGO_ENABLED=1

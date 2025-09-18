@@ -28,10 +28,10 @@ func init() {
 	}
 }
 
-func DetectFormatFromHeaderAccept(acceptHeaderValue string, opts *types.ResizeOption) {
+func DetectFormatFromHeaderAccept(ctx *context.Context, acceptHeaderValue string, opts *types.ResizeOption) {
 	acceptedFormat := strings.Split(acceptHeaderValue, ",")
 
-	if slices.Contains([]string{types.TypeFormatAuto, types.TypeAVIF}, opts.Format) && slices.Contains(acceptedFormat, types.MimeTypeAVIF) {
+	if ctx.Config.EnableFormatAutoAVIF && slices.Contains([]string{types.TypeFormatAuto, types.TypeAVIF}, opts.Format) && slices.Contains(acceptedFormat, types.MimeTypeAVIF) {
 		opts.Format = types.TypeAVIF
 		return
 	} else if slices.Contains([]string{types.TypeFormatAuto, types.TypeWEBP, types.TypeAVIF}, opts.Format) && slices.Contains(acceptedFormat, types.MimeTypeWEBP) {
@@ -49,7 +49,7 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 	}()
 	vary := []string{echo.HeaderAccept}
 	acceptHeaderValue := c.Request().Header.Get(echo.HeaderAccept)
-	DetectFormatFromHeaderAccept(acceptHeaderValue, opts)
+	DetectFormatFromHeaderAccept(ctx, acceptHeaderValue, opts)
 
 	if opts.NeedTransform() {
 		var errTransform error
