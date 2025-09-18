@@ -136,7 +136,7 @@ default_resize:
 
 **`auto`** (Recommended)
 - Automatically selects the best format based on client's `Accept` header
-- Priority: AVIF > WebP > Original format
+- Priority: AVIF > WebP > Original format, only if enable_format_auto_avif is enabled, otherwise the priority is WebP > Original
 - Provides optimal file size and quality
 
 **`jpeg`**
@@ -162,6 +162,16 @@ default_resize:
 - ~50% smaller than JPEG with same quality
 - Limited browser support (~90%)
 - Requires `libaom-dev` system dependency
+
+> [!WARNING]
+> This application uses a WebAssembly (WASM) library for AVIF format encoding ([gen2brain/avif](https://github.com/gen2brain/avif)).
+> While this provides good compatibility and stability, 
+> the WASM implementation shows reduced performance when encoding large files due to
+> the inherent limitations of the WebAssembly runtime.
+> 
+> The native AOM library offers significantly faster encoding performance, 
+> particularly for large image files. However, 
+> this library suffers from memory leaks that can cause memory consumption to increase over time during prolonged usage.
 
 #### Auto Format Selection
 

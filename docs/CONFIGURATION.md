@@ -24,6 +24,9 @@ http:
       username: "admin"
       password: "secret"
 
+# Enable AVIF format support for auto-detection
+enable_format_auto_avif: true 
+
 # Accepted file types (without resizing)
 accept_type_files: # Default value
   - "plain"
@@ -536,6 +539,8 @@ headers:
   x-powered-by: "go-media-resizer"
 
 request_timeout: "10s"
+
+enable_format_auto_avif: true
 
 accept_type_files:
   - "plain"
