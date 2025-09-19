@@ -138,6 +138,22 @@ func TestSendStream(t *testing.T) {
 			wantErr: assert.NoError,
 		},
 		{
+			name:         "successWithSVG",
+			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, Width: 50, Height: 50, OriginFormat: types.TypeSVG, Source: "/logo.svg"},
+			headerAccept: "image/svg+xml",
+			contentFn: func() *bytes.Buffer {
+				buff := ctx.BufferPool.Get().(*bytes.Buffer)
+				buff.WriteString("hello")
+				return buff
+			},
+			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusOK, rec.Code)
+				assert.Equal(t, types.MimeTypeSVG, rec.Header().Get(echo.HeaderContentType))
+				assert.Equal(t, []byte("hello"), rec.Body.Bytes())
+			},
+			wantErr: assert.NoError,
+		},
+		{
 			name:         "successWithResizeFormat",
 			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/paysage.png", Headers: types.Headers{"X-Custom": "foo"}, Width: 500},
 			headerAccept: "image/avif,image/webp,image/png",
