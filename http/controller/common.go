@@ -52,7 +52,7 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 	acceptHeaderValue := c.Request().Header.Get(echo.HeaderAccept)
 	DetectFormatFromHeaderAccept(ctx, acceptHeaderValue, opts)
 
-	if opts.NeedTransform() {
+	if opts.NeedTransform() && slices.Contains(ctx.Config.ResizeTypeFiles, opts.OriginFormat) {
 		var errTransform error
 		errTransform = transform.Transform(content, opts)
 		if errTransform != nil {
