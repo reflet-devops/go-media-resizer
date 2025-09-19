@@ -11,7 +11,7 @@ acl purge {
 }
 
 sub vcl_recv {
-    if (req.url ~ "^/health/ping" || req.url ~ "^/.*/webhook") {
+    if (req.url ~ "^/health/ping" || req.url ~ "^/.*/webhook" || req.url ~ "^/metrics") {
         return (pass);
     }
 
@@ -31,6 +31,8 @@ sub vcl_recv {
         }
         return (synth(200, "Ban added."));
     }
+
+    return (hash);
 }
 
 sub vcl_hash {
@@ -45,21 +47,34 @@ sub vcl_hash {
 }
 
 sub vcl_deliver {
+    unset resp.http.Via;
+    unset resp.http.X-Varnish;
+    unset resp.http.Server;
+
     if (obj.hits > 0) {
         set resp.http.X-Cache = "HIT";
     } else {
         set resp.http.X-Cache = "MISS";
     }
-}
 
-sub vcl_backend_response {
-
-    if (beresp.status >= 200 && beresp.status < 400) {
-      set beresp.ttl = 1h;
-      set beresp.grace = 1h;
-    } else {
-      set beresp.uncacheable = true;
+    if (obj.ttl < 0s && obj.ttl + obj.grace > 0s) {
+        set resp.http.X-Cache = "HIT-GRACE";
     }
 }
 
+sub vcl_backend_response {
+    if (beresp.status >= 200 && beresp.status < 400) {
+      set beresp.ttl = 1h;
+        set beresp.grace = 3h;
+        set beresp.keep = 4h;
 
+        unset beresp.http.Set-Cookie;
+
+    } else {
+        set beresp.ttl = 0s;
+        set beresp.grace = 0s;
+      set beresp.uncacheable = true;
+    }
+
+    return (deliver);
+}

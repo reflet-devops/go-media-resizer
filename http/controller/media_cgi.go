@@ -8,6 +8,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/http/route"
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"github.com/reflet-devops/go-media-resizer/logger"
 	"github.com/reflet-devops/go-media-resizer/mapstructure"
@@ -21,7 +22,6 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 		opts := ctx.OptsResizePool.Get().(*types.ResizeOption)
 		opts.ResetToDefaults(&ctx.Config.ResizeCGI.DefaultResizeOpts)
 		opts.Source = source
-		opts.Headers = types.Headers{}
 
 		fileExtension := urltools.GetExtension(source)
 		fileType := types.GetType(fileExtension)
@@ -40,16 +40,15 @@ func GetMediaCGI(ctx *context.Context) func(c echo.Context) error {
 		}
 
 		buffer := ctx.BufferPool.Get().(*bytes.Buffer)
-		errFetch := fetchCGIResource(ctx, c.Request().Header.Get(echo.HeaderXRequestID), source, buffer)
+		projectIdHeader, errFetch := fetchCGIResource(ctx, c.Request().Header.Get(echo.HeaderXRequestID), source, buffer)
 		if errFetch != nil {
 			resetBuffer(ctx, buffer)
 			return c.String(buildinHttp.StatusInternalServerError, errFetch.Error())
 		}
 
-		opts.AddTag(types.GetTagSourcePathHash(urltools.GetUri(opts.Source)))
-
+		opts.AddTag(types.GetTagSourcePathHash(types.FormatProjectPathHash(projectIdHeader, urltools.GetUri(opts.Source))))
 		for k, v := range ctx.Config.Headers {
-			opts.Headers[k] = v
+			opts.AddHeader(k, v)
 		}
 		return SendStream(ctx, c, opts, buffer)
 	}
@@ -73,7 +72,7 @@ func parseOption(optsHeader string) map[string]interface{} {
 	return optMap
 }
 
-func fetchCGIResource(ctx *context.Context, requestId string, source string, buffer *bytes.Buffer) error {
+func fetchCGIResource(ctx *context.Context, requestId string, source string, buffer *bytes.Buffer) (string, error) {
 	req := fasthttp.AcquireRequest()
 	resp := fasthttp.AcquireResponse()
 	defer func() {
@@ -91,12 +90,12 @@ func fetchCGIResource(ctx *context.Context, requestId string, source string, buf
 	err := ctx.HttpClient.DoTimeout(req, resp, ctx.Config.RequestTimeout)
 
 	if err != nil {
-		return fmt.Errorf("fetchCGIResource: GET %s: error with request: %v", source, err)
+		return "", fmt.Errorf("fetchCGIResource: GET %s: error with request: %v", source, err)
 	}
 
 	if resp.StatusCode() != fasthttp.StatusOK {
-		return fmt.Errorf("fetchCGIResource: GET %s: invalid status code status code: %d", source, resp.StatusCode())
+		return "", fmt.Errorf("fetchCGIResource: GET %s: invalid status code status code: %d", source, resp.StatusCode())
 	}
 	_, err = buffer.Write(resp.Body())
-	return err
+	return string(resp.Header.Peek(route.ProjectIdHeader)), err
 }

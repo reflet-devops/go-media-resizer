@@ -2,13 +2,14 @@ package cache_purge
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"github.com/reflet-devops/go-media-resizer/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/types"
-	"strings"
 )
 
 const (
@@ -33,11 +34,16 @@ func (v varnishTag) Type() string {
 
 func (v varnishTag) Purge(events types.Events) {
 	for _, event := range events {
-		headers := map[string]string{types.HeaderCachePurge: fmt.Sprintf("(%s)", types.GetTagSourcePathHash(event.Path))}
+		fullPath := urltools.FormatPathWithPrefix(v.projectCfg.PrefixPath, event.Path)
+		headers := map[string]string{
+			types.HeaderCachePurge: fmt.Sprintf(
+				"(%s)", types.GetTagSourcePathHash(types.FormatProjectPathHash(v.projectCfg.ID, fullPath)),
+			),
+		}
 		VarnishDoRequest(
 			v.ctx,
 			"BAN",
-			strings.Join([]string{v.cfg.Server, urltools.JoinUri(v.projectCfg.PrefixPath, event.Path)}, "/"),
+			strings.Join([]string{v.cfg.Server, fullPath}, "/"),
 			headers,
 		)
 	}

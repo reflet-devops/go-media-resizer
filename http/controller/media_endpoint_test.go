@@ -4,18 +4,20 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/labstack/echo/v4"
-	"github.com/reflet-devops/go-media-resizer/config"
-	"github.com/reflet-devops/go-media-resizer/context"
-	mockTypes "github.com/reflet-devops/go-media-resizer/mocks/types"
-	"github.com/reflet-devops/go-media-resizer/types"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
 	"testing"
+
+	"github.com/labstack/echo/v4"
+	"github.com/reflet-devops/go-media-resizer/config"
+	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/http/route"
+	mockTypes "github.com/reflet-devops/go-media-resizer/mocks/types"
+	"github.com/reflet-devops/go-media-resizer/types"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 type errorReader struct {
@@ -57,6 +59,7 @@ func Test_GetMedia(t *testing.T) {
 			name:     "success",
 			resource: "resource.txt",
 			prjConf: &config.Project{
+				ID:              "project-id",
 				AcceptTypeFiles: []string{types.TypeText},
 				Endpoints: []config.Endpoint{
 					{
@@ -73,6 +76,8 @@ func Test_GetMedia(t *testing.T) {
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusOK, rec.Code)
 				assert.Contains(t, rec.Header().Get(echo.HeaderContentType), types.MimeTypeText)
+				assert.Contains(t, rec.Header().Get(route.ProjectIdHeader), "project-id")
+				assert.Contains(t, rec.Header().Get(route.CacheTagHeader), "source_path_hash_4b8d00178d179318c1e162ff5ef84a9d")
 				assert.Equal(t, "hello world", rec.Body.String())
 			},
 		},
@@ -80,6 +85,7 @@ func Test_GetMedia(t *testing.T) {
 			name:     "success_EndpointNotMatch",
 			resource: "resource.txt",
 			prjConf: &config.Project{
+				ID:              "project-id",
 				AcceptTypeFiles: []string{types.TypeText},
 				Endpoints: []config.Endpoint{
 					{
@@ -100,6 +106,7 @@ func Test_GetMedia(t *testing.T) {
 			name:     "success_NoEndpoint",
 			resource: "resource.txt",
 			prjConf: &config.Project{
+				ID:              "project-id",
 				AcceptTypeFiles: []string{types.TypeText},
 				Endpoints:       []config.Endpoint{},
 			},
@@ -114,6 +121,7 @@ func Test_GetMedia(t *testing.T) {
 			name:     "fail_fileTypeNotAcceptedFail",
 			resource: "resource.txt",
 			prjConf: &config.Project{
+				ID:              "project-id",
 				AcceptTypeFiles: []string{types.TypePNG},
 				Endpoints: []config.Endpoint{
 					{
@@ -134,6 +142,7 @@ func Test_GetMedia(t *testing.T) {
 			name:     "fail_GetFile",
 			resource: "resource.txt",
 			prjConf: &config.Project{
+				ID:              "project-id",
 				AcceptTypeFiles: []string{types.TypeText},
 				Endpoints: []config.Endpoint{
 					{
@@ -156,6 +165,7 @@ func Test_GetMedia(t *testing.T) {
 			name:     "fail_Copy",
 			resource: "resource.txt",
 			prjConf: &config.Project{
+				ID:              "project-id",
 				AcceptTypeFiles: []string{types.TypeText},
 				Endpoints: []config.Endpoint{
 					{

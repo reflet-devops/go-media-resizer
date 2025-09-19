@@ -41,3 +41,7 @@ func JoinUri(elem ...string) string {
 	}
 	return strings.Join(elem, "/")
 }
+
+func FormatPathWithPrefix(prefixPath, path string) string {
+	return JoinUri(strings.Trim(prefixPath, "/"), strings.Trim(path, "/"))
+}

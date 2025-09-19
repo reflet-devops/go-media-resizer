@@ -6,6 +6,10 @@ import (
 
 type Headers map[string]string
 
+func (h Headers) Add(key, value string) {
+	h[key] = value
+}
+
 type ResizeOption struct {
 	OriginFormat string `mapstructure:"origin_format"`
 	Format       string `mapstructure:"format"`
@@ -49,9 +53,8 @@ func (r *ResizeOption) ResetToDefaults(defaults *ResizeOption) {
 	*r = *defaults
 
 	if defaults.Headers != nil {
-		r.Headers = make(Headers, len(defaults.Headers))
 		for k, v := range defaults.Headers {
-			r.Headers[k] = v
+			r.AddHeader(k, v)
 		}
 	}
 
@@ -67,6 +70,13 @@ func (r *ResizeOption) HasTags() bool {
 
 func (r *ResizeOption) AddTag(tag string) {
 	r.Tags = append(r.Tags, tag)
+}
+
+func (r *ResizeOption) AddHeader(key, value string) {
+	if r.Headers == nil {
+		r.Headers = Headers{}
+	}
+	r.Headers.Add(key, value)
 }
 
 func (r *ResizeOption) TagsString() string {

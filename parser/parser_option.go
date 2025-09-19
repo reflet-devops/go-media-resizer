@@ -22,7 +22,10 @@ func ParseOption(endpoint *config.Endpoint, projectCfg *config.Project, path str
 	if endpoint.CompiledRegex == nil {
 		opts.Source = path
 		opts.OriginFormat = originType
-		opts.Headers = projectCfg.Headers
+		for k, v := range projectCfg.Headers {
+			opts.AddHeader(k, v)
+		}
+
 		return true, nil
 	}
 
@@ -45,10 +48,10 @@ func ParseOption(endpoint *config.Endpoint, projectCfg *config.Project, path str
 	}
 	opts.ResetToDefaults(&endpoint.DefaultResizeOpts)
 	opts.OriginFormat = originType
-	opts.Headers = types.Headers{}
 	for k, v := range projectCfg.Headers {
-		opts.Headers[k] = v
+		opts.AddHeader(k, v)
 	}
+
 	opts.Source = strings.Trim(opts.Source, "/")
 
 	err := mapstructure.Decode(params, &opts)

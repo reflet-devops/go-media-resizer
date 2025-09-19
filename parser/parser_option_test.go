@@ -45,7 +45,7 @@ func Test_ParseOption(t *testing.T) {
 			endpoint:   &config.Endpoint{Regex: "\\/(?<width>[0-9]{1,4})\\/(?<height>[0-9]{1,4})(?<source>.*)"},
 			projectCfg: &config.Project{AcceptTypeFiles: []string{types.TypePNG}},
 			path:       "/500/500/media/image.png",
-			want:       &types.ResizeOption{OriginFormat: types.TypePNG, Width: 500, Height: 500, Source: "/media/image.png", Headers: types.Headers{}},
+			want:       &types.ResizeOption{OriginFormat: types.TypePNG, Width: 500, Height: 500, Source: "/media/image.png"},
 			found:      true,
 			wantErr:    assert.NoError,
 		},

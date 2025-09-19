@@ -204,3 +204,47 @@ func TestResizeOption_ResetToDefaults(t *testing.T) {
 		})
 	}
 }
+
+func TestHeaders_Add(t *testing.T) {
+	headers := Headers{}
+	headers.Add("foo", "bar")
+	assert.Equal(t, Headers{"foo": "bar"}, headers)
+}
+
+func TestResizeOption_AddHeader(t *testing.T) {
+	type args struct {
+		key   string
+		value string
+	}
+	tests := []struct {
+		name    string
+		headers Headers
+		args    args
+		want    Headers
+	}{
+		{
+			name:    "successNilHeaders",
+			headers: nil,
+			args:    args{key: "X-Custom", value: "bar"},
+			want:    Headers{"X-Custom": "bar"},
+		},
+		{
+			name:    "successNotNilHeaders",
+			headers: Headers{"X-Custom": "foo"},
+			args:    args{key: "X-Other", value: "bar"},
+			want:    Headers{"X-Custom": "foo", "X-Other": "bar"},
+		},
+		{
+			name:    "successNotNilHeadersAndReplaceExistingHeader",
+			headers: Headers{"X-Custom": "foo"},
+			args:    args{key: "X-Custom", value: "bar"},
+			want:    Headers{"X-Custom": "bar"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &ResizeOption{Headers: tt.headers}
+			r.AddHeader(tt.args.key, tt.args.value)
+		})
+	}
+}

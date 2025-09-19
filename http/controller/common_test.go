@@ -11,6 +11,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/http/route"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -130,6 +131,7 @@ func TestSendStream(t *testing.T) {
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusOK, rec.Code)
 				assert.Equal(t, types.MimeTypeText, rec.Header().Get(echo.HeaderContentType))
+				assert.Equal(t, "tag1", rec.Header().Get(route.CacheTagHeader))
 				assert.Equal(t, "foo", rec.Header().Get("X-Custom"))
 				assert.Equal(t, []byte("hello"), rec.Body.Bytes())
 			},

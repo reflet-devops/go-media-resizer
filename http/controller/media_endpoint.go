@@ -10,6 +10,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/http/route"
+	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"github.com/reflet-devops/go-media-resizer/parser"
 	"github.com/reflet-devops/go-media-resizer/types"
 )
@@ -45,7 +47,10 @@ func GetMedia(ctx *context.Context, project *config.Project, storage types.Stora
 			}
 			_ = file.Close()
 
-			opts.AddTag(types.GetTagSourcePathHash(opts.Source))
+			opts.AddTag(types.GetTagSourcePathHash(
+				types.FormatProjectPathHash(project.ID, urltools.FormatPathWithPrefix(project.PrefixPath, opts.Source))),
+			)
+			opts.AddHeader(route.ProjectIdHeader, project.ID)
 
 			return SendStream(ctx, c, opts, buffer)
 		}
