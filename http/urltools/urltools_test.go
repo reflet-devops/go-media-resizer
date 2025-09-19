@@ -1,8 +1,9 @@
 package urltools
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_RemovePortNumber(t *testing.T) {
@@ -164,6 +165,64 @@ func TestGetUri(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equalf(t, tt.want, GetUri(tt.url), "GetUri(%v)", tt.url)
+		})
+	}
+}
+
+func TestFormatPathWithPrefix(t *testing.T) {
+	type args struct {
+		prefixPath string
+		path       string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "successWithEmptyPrefix",
+			args: args{
+				prefixPath: "",
+				path:       "test",
+			},
+			want: "test",
+		},
+		{
+			name: "successWithEmptyPrefixAndSlashInPath",
+			args: args{
+				prefixPath: "",
+				path:       "/test/test/",
+			},
+			want: "test/test",
+		},
+		{
+			name: "successWithPrefixAndSlash",
+			args: args{
+				prefixPath: "/prefix",
+				path:       "test",
+			},
+			want: "prefix/test",
+		},
+		{
+			name: "successWithPrefixAndSlashPrefixAndPath",
+			args: args{
+				prefixPath: "/prefix/",
+				path:       "/test/test/",
+			},
+			want: "prefix/test/test",
+		},
+		{
+			name: "successWithPrefix",
+			args: args{
+				prefixPath: "prefix",
+				path:       "test",
+			},
+			want: "prefix/test",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, FormatPathWithPrefix(tt.args.prefixPath, tt.args.path), "FormatPathWithPrefix(%v, %v)", tt.args.prefixPath, tt.args.path)
 		})
 	}
 }

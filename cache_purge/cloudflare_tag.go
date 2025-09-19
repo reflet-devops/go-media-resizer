@@ -4,6 +4,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"github.com/reflet-devops/go-media-resizer/mapstructure"
 	"github.com/reflet-devops/go-media-resizer/types"
 )
@@ -30,8 +31,9 @@ func (v cloudflareTag) Type() string {
 
 func (v cloudflareTag) Purge(events types.Events) {
 	for _, event := range events {
+		fullPath := urltools.FormatPathWithPrefix(v.projectCfg.PrefixPath, event.Path)
 		opts := CloudflareCachePurge{
-			Tags: []string{types.GetTagSourcePathHash(event.Path)},
+			Tags: []string{types.GetTagSourcePathHash(types.FormatProjectPathHash(v.projectCfg.ID, fullPath))},
 		}
 		CloudflareDoRequest(
 			v.ctx,

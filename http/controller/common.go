@@ -12,6 +12,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/hash"
+	"github.com/reflet-devops/go-media-resizer/http/route"
 	"github.com/reflet-devops/go-media-resizer/http/urltools"
 	"github.com/reflet-devops/go-media-resizer/logger"
 	"github.com/reflet-devops/go-media-resizer/transform"
@@ -67,7 +68,7 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 	c.Response().Header().Add("ETag", contentHash)
 	c.Response().Header().Add(echo.HeaderVary, strings.Join(vary, ", "))
 	if opts.HasTags() {
-		c.Response().Header().Add("Cache-Tag", opts.TagsString())
+		c.Response().Header().Add(route.CacheTagHeader, opts.TagsString())
 	}
 
 	for k, v := range opts.Headers {

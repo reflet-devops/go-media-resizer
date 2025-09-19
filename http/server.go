@@ -156,6 +156,7 @@ func listenFileChange(ctx *context.Context, chanEvents chan types.Events, purgeC
 			select {
 			case event := <-chanEvents:
 				for _, purgeCache := range purgeCaches {
+					ctx.Logger.Debug(fmt.Sprintf("recived %d events send to purge cache", len(event)))
 					purgeCache.Purge(event)
 				}
 			case <-ctx.Done():

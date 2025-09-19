@@ -3,14 +3,13 @@ package cache_purge
 import (
 	"bytes"
 	"errors"
-	"fmt"
+	"testing"
+	"time"
+
 	"github.com/reflet-devops/go-media-resizer/context"
 	mockTypes "github.com/reflet-devops/go-media-resizer/mocks/types"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/mock/gomock"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestCloudflareDoRequest(t *testing.T) {
@@ -32,9 +31,11 @@ func TestCloudflareDoRequest(t *testing.T) {
 					if !bytes.Equal(req.Header.Method(), []byte("POST")) {
 						return false
 					}
-					if !strings.Contains(req.Header.String(), fmt.Sprintf("%s: Bearer auth_token", fasthttp.HeaderAuthorization)) {
+
+					if string(req.Header.Peek(fasthttp.HeaderAuthorization)) != "Bearer auth_token" {
 						return false
 					}
+
 					if !bytes.Equal(req.Body(), []byte(`{"files":["http://example.com/path"]}`)) {
 						return false
 					}
@@ -60,12 +61,13 @@ func TestCloudflareDoRequest(t *testing.T) {
 					if !bytes.Equal(req.Header.Method(), []byte("POST")) {
 						return false
 					}
-					if !strings.Contains(req.Header.String(), "X-Auth-Email: email") {
+					if string(req.Header.Peek("X-Auth-Email")) != "email" {
 						return false
 					}
-					if !strings.Contains(req.Header.String(), "X-Auth-Key: key") {
+					if string(req.Header.Peek("X-Auth-Key")) != "key" {
 						return false
 					}
+
 					if !bytes.Equal(req.Body(), []byte(`{"files":["http://example.com/path"]}`)) {
 						return false
 					}
@@ -91,7 +93,8 @@ func TestCloudflareDoRequest(t *testing.T) {
 					if !bytes.Equal(req.Header.Method(), []byte("POST")) {
 						return false
 					}
-					if !strings.Contains(req.Header.String(), fmt.Sprintf("%s: Bearer auth_token", fasthttp.HeaderAuthorization)) {
+
+					if string(req.Header.Peek(fasthttp.HeaderAuthorization)) != "Bearer auth_token" {
 						return false
 					}
 					if !bytes.Equal(req.Body(), []byte(`{"tags":["tag1","tag2"]}`)) {

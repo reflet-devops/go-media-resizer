@@ -2,7 +2,9 @@ package cache_purge
 
 import (
 	"bytes"
-	"fmt"
+	"testing"
+	"time"
+
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
 	mockTypes "github.com/reflet-devops/go-media-resizer/mocks/types"
@@ -10,9 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/mock/gomock"
-	"strings"
-	"testing"
-	"time"
 )
 
 func Test_varnishTag_Type(t *testing.T) {
@@ -89,7 +88,7 @@ func Test_varnishTag_Purge(t *testing.T) {
 		{
 			name:       "Success",
 			cfg:        ConfigVarnish{Server: "http://127.0.0.1"},
-			projectCfg: &config.Project{PrefixPath: ""},
+			projectCfg: &config.Project{ID: "project-id", PrefixPath: ""},
 			events:     types.Events{{Type: types.EventTypePurge, Path: "test/text.txt"}},
 			mockFn: func(mockClient *mockTypes.MockClient) {
 				mockClient.EXPECT().DoTimeout(gomock.Cond(func(req *fasthttp.Request) bool {
@@ -99,7 +98,8 @@ func Test_varnishTag_Purge(t *testing.T) {
 					if !bytes.Equal(req.Header.Method(), []byte("BAN")) {
 						return false
 					}
-					if !strings.Contains(req.Header.String(), fmt.Sprintf("%s: (source_path_hash_72860d7a91b9aa7fb0377f2b4c823c4f)", types.HeaderCachePurge)) {
+
+					if string(req.Header.Peek(types.HeaderCachePurge)) != "(source_path_hash_c6047f34708c36213118502d98d05466)" {
 						return false
 					}
 					return true
@@ -115,7 +115,7 @@ func Test_varnishTag_Purge(t *testing.T) {
 		{
 			name:       "SuccessWithPrefix",
 			cfg:        ConfigVarnish{Server: "http://127.0.0.1"},
-			projectCfg: &config.Project{PrefixPath: "prefix"},
+			projectCfg: &config.Project{ID: "project-id", PrefixPath: "prefix"},
 			events:     types.Events{{Type: types.EventTypePurge, Path: "test/text.txt"}},
 			mockFn: func(mockClient *mockTypes.MockClient) {
 				mockClient.EXPECT().DoTimeout(gomock.Cond(func(req *fasthttp.Request) bool {
@@ -126,7 +126,7 @@ func Test_varnishTag_Purge(t *testing.T) {
 						return false
 					}
 
-					if !strings.Contains(req.Header.String(), "X-Cache-Tag: (source_path_hash_72860d7a91b9aa7fb0377f2b4c823c4f)") {
+					if string(req.Header.Peek(types.HeaderCachePurge)) != "(source_path_hash_b7c209b0abcb1d2bc96952a8a512ee12)" {
 						return false
 					}
 					return true

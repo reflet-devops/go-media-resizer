@@ -2,6 +2,7 @@ package cache_purge
 
 import (
 	"fmt"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
@@ -32,11 +33,11 @@ func (v cloudflareUrl) Type() string {
 
 func (v cloudflareUrl) Purge(events types.Events) {
 	for _, event := range events {
-		path := urltools.JoinUri(v.projectCfg.PrefixPath, event.Path)
+		fullPath := urltools.FormatPathWithPrefix(v.projectCfg.PrefixPath, event.Path)
 		opts := CloudflareCachePurge{
 			Files: []string{
-				fmt.Sprintf("http://%s/%s", v.projectCfg.Hostname, path),
-				fmt.Sprintf("https://%s/%s", v.projectCfg.Hostname, path),
+				fmt.Sprintf("http://%s/%s", v.projectCfg.Hostname, fullPath),
+				fmt.Sprintf("https://%s/%s", v.projectCfg.Hostname, fullPath),
 			},
 		}
 		CloudflareDoRequest(

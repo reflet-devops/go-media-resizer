@@ -10,6 +10,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/reflet-devops/go-media-resizer/context"
+	"github.com/reflet-devops/go-media-resizer/http/route"
 	mockTypes "github.com/reflet-devops/go-media-resizer/mocks/types"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/stretchr/testify/assert"
@@ -167,13 +168,15 @@ func Test_fetchCGIResource_Success(t *testing.T) {
 		func(req *fasthttp.Request, respFn *fasthttp.Response, timeout time.Duration) error {
 			respFn.SetStatusCode(fasthttp.StatusOK)
 			respFn.SetBody([]byte("hello world"))
+			respFn.Header.Set(route.ProjectIdHeader, "project")
 			return nil
 		},
 	)
 	buff := &bytes.Buffer{}
-	err := fetchCGIResource(ctx, "request-id", source, buff)
+	projectID, err := fetchCGIResource(ctx, "request-id", source, buff)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello world", buff.String())
+	assert.Equal(t, "project", projectID)
 }
 
 func Test_fetchCGIResource_Error_Fail(t *testing.T) {
@@ -196,9 +199,10 @@ func Test_fetchCGIResource_Error_Fail(t *testing.T) {
 		return true
 	}), gomock.Any(), gomock.Eq(timeOut)).Return(fmt.Errorf("test error"))
 	buff := &bytes.Buffer{}
-	err := fetchCGIResource(ctx, "request-id", source, buff)
+	projectID, err := fetchCGIResource(ctx, "request-id", source, buff)
 	assert.Error(t, err)
 	assert.Equal(t, "fetchCGIResource: GET http://image.com/image.png: error with request: test error", err.Error())
+	assert.Equal(t, "", projectID)
 }
 
 func Test_fetchCGIResource_StatusCode_Error(t *testing.T) {
@@ -226,9 +230,10 @@ func Test_fetchCGIResource_StatusCode_Error(t *testing.T) {
 		},
 	)
 	buff := &bytes.Buffer{}
-	err := fetchCGIResource(ctx, "request-id", source, buff)
+	projectID, err := fetchCGIResource(ctx, "request-id", source, buff)
 	assert.Error(t, err)
 	assert.Equal(t, "fetchCGIResource: GET http://image.com/image.png: invalid status code status code: 403", err.Error())
+	assert.Equal(t, "", projectID)
 }
 
 func Test_parseOption(t *testing.T) {
