@@ -52,7 +52,7 @@ func Resize(img image.Image, opts *types.ResizeOption) image.Image {
 
 	switch opts.Fit {
 	case types.TypeFitCrop:
-		imgResize = imaging.CropCenter(img, opts.Width, opts.Height)
+		imgResize = imaging.Fill(img, opts.Width, opts.Height, imaging.Center, imaging.Lanczos)
 	case types.TypeFitScaleDown:
 		imgResize = imaging.Fit(img, opts.Width, opts.Height, imaging.Lanczos)
 	default:

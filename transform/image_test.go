@@ -5,18 +5,19 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/disintegration/imaging"
-	"github.com/gen2brain/avif"
-	"github.com/kolesa-team/go-webp/webp"
-	"github.com/reflet-devops/go-media-resizer/hash"
-	"github.com/reflet-devops/go-media-resizer/types"
-	"github.com/stretchr/testify/assert"
 	"image"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/disintegration/imaging"
+	"github.com/gen2brain/avif"
+	"github.com/kolesa-team/go-webp/webp"
+	"github.com/reflet-devops/go-media-resizer/hash"
+	"github.com/reflet-devops/go-media-resizer/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestResize(t *testing.T) {
@@ -48,7 +49,7 @@ func TestResize(t *testing.T) {
 		{
 			name:    "successWithJpegFitCrop",
 			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitCrop, Source: "/fixtures/paysage.jpg", Height: 100, Width: 100},
-			want:    "5e932cfd7e6451d2289ce0d9cab7384cf07d80ca4b5b96e677f8a0cd9e19c7f8",
+			want:    "51f4ce14ad1261f4e05d9b49b323c78e85506147c9e3425b6b68e10cf5452b9a",
 			wantErr: assert.NoError,
 		},
 		{
@@ -68,7 +69,7 @@ func TestResize(t *testing.T) {
 		{
 			name:    "successWithPngFitCrop",
 			opts:    &types.ResizeOption{OriginFormat: types.TypePNG, Fit: types.TypeFitCrop, Source: "/fixtures/paysage.png", Height: 100, Width: 100},
-			want:    "aa3567b58510683cfd955301ac18e2e0c7c4c34d5428fa6b2afed42be89ef8b4",
+			want:    "0d8502755ef6456be16406f7575e678347a2b5e3c79af0c96b5791f75234fc05",
 			wantErr: assert.NoError,
 		},
 	}
