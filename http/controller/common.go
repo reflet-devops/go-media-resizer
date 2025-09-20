@@ -32,12 +32,14 @@ func init() {
 func DetectFormatFromHeaderAccept(ctx *context.Context, acceptHeaderValue string, opts *types.ResizeOption) {
 	acceptedFormat := strings.Split(acceptHeaderValue, ",")
 
-	if ctx.Config.EnableFormatAutoAVIF && slices.Contains([]string{types.TypeFormatAuto, types.TypeAVIF}, opts.Format) && slices.Contains(acceptedFormat, types.MimeTypeAVIF) {
-		opts.Format = types.TypeAVIF
-		return
-	} else if slices.Contains([]string{types.TypeFormatAuto, types.TypeWEBP, types.TypeAVIF}, opts.Format) && slices.Contains(acceptedFormat, types.MimeTypeWEBP) {
-		opts.Format = types.TypeWEBP
-		return
+	if slices.Contains(types.TypesImages, opts.OriginFormat) {
+		if ctx.Config.EnableFormatAutoAVIF && slices.Contains([]string{types.TypeFormatAuto, types.TypeAVIF}, opts.Format) && slices.Contains(acceptedFormat, types.MimeTypeAVIF) {
+			opts.Format = types.TypeAVIF
+			return
+		} else if slices.Contains([]string{types.TypeFormatAuto, types.TypeWEBP, types.TypeAVIF}, opts.Format) && slices.Contains(acceptedFormat, types.MimeTypeWEBP) {
+			opts.Format = types.TypeWEBP
+			return
+		}
 	}
 
 	opts.Format = opts.OriginFormat

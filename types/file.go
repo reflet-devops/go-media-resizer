@@ -69,6 +69,10 @@ const (
 	TypeFitScaleDown = "scale-down"
 )
 
+var (
+	TypesImages = []string{TypeAVIF, TypeWEBP, TypeJPEG, TypePNG}
+)
+
 func GetMimeType(code string) string {
 	switch code {
 	case TypeAVIF:
