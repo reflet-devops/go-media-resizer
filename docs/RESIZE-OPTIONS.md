@@ -193,7 +193,7 @@ Content-Type: image/avif
 
 ### Fit
 **Type:** String  
-**Values:** `"resize"`, `"crop"`  
+**Values:** `"resize"`, `"crop"`, `"scale-down"`  
 **Default:** `""`  
 **CDN-CGI:** `fit=crop`
 
@@ -229,7 +229,23 @@ fit: "resize"  # Result: 400x320 (maintains ratio)
 
 ```yaml
 # Example: 1000x800 image → 400x400  
-fit: "crop"    # Result: 400x400 (crops center)
+fit: "crop"    # Result: 400x400
+```
+
+**`scale-down`**
+- Scales image to fit within dimensions
+- Only reduces size, never enlarges
+- Maintains original aspect ratio
+- If image is smaller than dimensions, returns unchanged
+
+```yaml
+# Example: 1000x800 image → 400x400
+fit: "scale-down"    # Result: 400x320 (scaled to fit)
+```
+
+```yaml
+# Example: 300x200 image → 400x400
+fit: "scale-down"    # Result: 300x200 (unchanged, already smaller)
 ```
 
 #### Visual Examples
