@@ -10,7 +10,8 @@ import (
 	"github.com/reflet-devops/go-media-resizer/types"
 )
 
-func ParseOption(endpoint *config.Endpoint, projectCfg *config.Project, path string, opts *types.ResizeOption) (bool, error) {
+func ParseOption(endpoint *config.Endpoint, projectCfg *config.Project, uri string, opts *types.ResizeOption) (bool, error) {
+	path := strings.Split(uri, "?")[0]
 	originExt := urltools.GetExtension(path)
 	originType := types.GetType(originExt)
 
@@ -30,12 +31,11 @@ func ParseOption(endpoint *config.Endpoint, projectCfg *config.Project, path str
 	}
 
 	re := endpoint.CompiledRegex
-	if !re.MatchString(path) {
-
+	if !re.MatchString(uri) {
 		return false, nil
 	}
 
-	matches := re.FindStringSubmatch(path)
+	matches := re.FindStringSubmatch(uri)
 	groupNames := re.SubexpNames()
 
 	params := make(map[string]string)
@@ -52,9 +52,12 @@ func ParseOption(endpoint *config.Endpoint, projectCfg *config.Project, path str
 		opts.AddHeader(k, v)
 	}
 
-	opts.Source = strings.Trim(opts.Source, "/")
-
 	err := mapstructure.Decode(params, &opts)
+	if err != nil {
+		return true, err
+	}
 
-	return true, err
+	opts.Source = strings.Split(opts.Source, "?")[0]
+
+	return true, nil
 }
