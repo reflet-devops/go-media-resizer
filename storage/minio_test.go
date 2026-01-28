@@ -5,6 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+	"unsafe"
+
 	"github.com/jonboulle/clockwork"
 	libMinio "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/notification"
@@ -14,12 +21,6 @@ import (
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
-	"reflect"
-	"sync"
-	"sync/atomic"
-	"testing"
-	"time"
-	"unsafe"
 )
 
 func generateMinioInfoJson(path string) string {
@@ -798,6 +799,32 @@ func Test_minio_notifyFileChange(t *testing.T) {
 			ctx.Cancel()
 		})
 	}
+}
+
+func Test_minio_notifyFileChange_ClosedChan(t *testing.T) {
+	ctx := context.TestContext(nil)
+	cfg := ConfigMinio{ConfigClientMinio: ConfigClientMinio{BucketName: "test"}, PrefixPath: ""}
+	minioChan := make(chan notification.Info)
+	chanEvents := make(chan types.Events, 1)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	primaryMinioMock := mockTypes.NewMockMinioClient(ctrl)
+	primaryMinioMock.EXPECT().ListenBucketNotification(
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+	).Times(1).Return(minioChan)
+
+	m := &minio{
+		primaryClient: primaryMinioMock,
+		cfg:           cfg,
+		ctx:           ctx,
+	}
+	go m.notifyFileChange(chanEvents)
+	time.Sleep(100 * time.Millisecond)
+	close(minioChan)
 }
 
 func Test_minio_NotifyFileChange(t *testing.T) {

@@ -199,7 +199,6 @@ func (m *minio) NotifyFileChange(chanEvent chan types.Events) {
 		select {
 		case <-ticker.Chan():
 			if m.IsListenNotifyStopped() && m.IsPrimaryOnline() {
-				m.ctx.Logger.Debug(fmt.Sprintf("restart listner file change"))
 				run()
 			}
 		case <-m.ctx.Done():
@@ -217,6 +216,7 @@ func (m *minio) notifyFileChange(chanEvent chan types.Events) {
 		string(notification.ObjectRemovedDelete),
 		string(notification.ObjectRemovedDeleteMarkerCreated),
 	}
+
 	minioChanEvent := m.primaryClient.ListenBucketNotification(
 		builtinCtx.Background(),
 		m.cfg.BucketName,
@@ -230,9 +230,14 @@ func (m *minio) notifyFileChange(chanEvent chan types.Events) {
 	}()
 	for {
 		select {
-		case minioEvent := <-minioChanEvent:
+		case minioEvent, ok := <-minioChanEvent:
+			if !ok {
+				// Channel closed, exit the loop
+				m.ctx.Logger.Debug(fmt.Sprintf("minio notification channel closed for %s/%s", m.cfg.Endpoint, m.cfg.BucketName))
+				return
+			}
 			if minioEvent.Err != nil {
-				m.ctx.Logger.Error(fmt.Sprintf("minio notify failed: %v", minioEvent.Err))
+				m.ctx.Logger.Error(fmt.Sprintf("minio notify failed for %s/%s: %v", m.cfg.Endpoint, m.cfg.BucketName, minioEvent.Err))
 				if IsNetworkOrHostDown(minioEvent.Err) {
 					return
 				}
