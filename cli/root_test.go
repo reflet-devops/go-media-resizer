@@ -3,6 +3,10 @@ package cli
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
+	"regexp"
+	"testing"
+
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/types"
@@ -10,9 +14,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/valyala/fasthttp"
-	"io"
-	"regexp"
-	"testing"
 )
 
 func Test_initConfig_Success(t *testing.T) {
@@ -118,7 +119,7 @@ func Test_prepareProject_Success(t *testing.T) {
 			},
 			{
 				ID:                   "concat",
-				ExtraAcceptTypeFiles: []string{".2", ".3"},
+				ExtraAcceptTypeFiles: []string{".4"},
 			},
 			{
 				ID:                   "extra-headers",
@@ -160,8 +161,8 @@ func Test_prepareProject_Success(t *testing.T) {
 		},
 		{
 			ID:                   "concat",
-			AcceptTypeFiles:      []string{".1", ".2", ".3"},
-			ExtraAcceptTypeFiles: []string{".2", ".3"},
+			AcceptTypeFiles:      []string{".1", ".3", ".4"},
+			ExtraAcceptTypeFiles: []string{".4"},
 			Headers: types.Headers{
 				"X-Custom": "foo",
 			},
