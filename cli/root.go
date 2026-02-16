@@ -138,7 +138,7 @@ func prepareProject(ctx *context.Context) error {
 	for i, project := range cfg.Projects {
 
 		if len(project.AcceptTypeFiles) == 0 {
-			project.AcceptTypeFiles = append(ctx.Config.AcceptTypeFiles, ctx.Config.ResizeTypeFiles...)
+			project.AcceptTypeFiles = slices.Concat(ctx.Config.AcceptTypeFiles, ctx.Config.ResizeTypeFiles)
 		}
 
 		if len(project.ExtraAcceptTypeFiles) > 0 {
