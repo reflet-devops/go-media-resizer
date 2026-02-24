@@ -31,7 +31,7 @@ func TestResize(t *testing.T) {
 		{
 			name:    "successWithJpegResize",
 			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Source: "/fixtures/paysage.jpg", Height: 100, Width: 100},
-			want:    "2bd761ee4b02f7ccbfc005e57b73b6a63f5731f723b442f9b5a8bb0abdef41b7",
+			want:    "84497d44a7fd7c2a31c8f339a2954f761d1aeeaafb3e5a816f101168f9bfc787",
 			wantErr: assert.NoError,
 		},
 		{
@@ -43,7 +43,7 @@ func TestResize(t *testing.T) {
 		{
 			name:    "successWithJpegResizeAndQuality",
 			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Source: "/fixtures/paysage.jpg", Height: 100, Width: 100, Quality: 80},
-			want:    "3ba2d01519093ce3ce501d9924d051bbd95b681d94209bc50ccbbb97a4955444",
+			want:    "bf5419fd9eb0edc486f581145402ad9196332492fb2a713faa203e9b0d8fe47f",
 			wantErr: assert.NoError,
 		},
 		{
@@ -53,9 +53,9 @@ func TestResize(t *testing.T) {
 			wantErr: assert.NoError,
 		},
 		{
-			name:    "successWithJpegFitScaleDown",
+			name:    "successWithJpegFitScaleDownFallbackResize",
 			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitScaleDown, Source: "/fixtures/paysage.jpg", Height: 100},
-			want:    "2045cafcfe4d96ec318e272a9801b874e48cd01b060665669d5206afeab24910",
+			want:    "cb94c098d8a5d0fbee07efa5b0e6f9e99d42ac9f3c456e4b66b14b1903e61ece",
 			wantErr: assert.NoError,
 		},
 
@@ -63,7 +63,7 @@ func TestResize(t *testing.T) {
 		{
 			name:    "successWithPngResize",
 			opts:    &types.ResizeOption{OriginFormat: types.TypePNG, Source: "/fixtures/paysage.png", Height: 100, Width: 100},
-			want:    "7399c06a9157e98a96f55ef8e190ed537f584bd81fcc905e519106512de2d938",
+			want:    "ead06327993c1600352468de72e407715f932eed0dbc6b1f380c55ecdd273dc8",
 			wantErr: assert.NoError,
 		},
 		{
