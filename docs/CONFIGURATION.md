@@ -163,7 +163,7 @@ default_resize:
   width: 800           # Width in pixels
   height: 600          # Height in pixels
   quality: 85          # JPEG quality (1-100)
-  fit: "crop"          # Resize method: crop or resize (default)
+  fit: "crop"          # Resize method: crop, resize, scale-down (default)
   
   # Image adjustment parameters
   blur: 2.5            # Blur radius (0 = no blur)

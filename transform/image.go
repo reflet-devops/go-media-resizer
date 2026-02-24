@@ -49,14 +49,17 @@ func Transform(file *bytes.Buffer, opts *types.ResizeOption) error {
 
 func Resize(img image.Image, opts *types.ResizeOption) image.Image {
 	var imgResize *image.NRGBA
+	if opts.Height == 0 || opts.Width == 0 {
+		opts.Fit = types.TypeResize
+	}
 
 	switch opts.Fit {
 	case types.TypeFitCrop:
 		imgResize = imaging.Fill(img, opts.Width, opts.Height, imaging.Center, imaging.Lanczos)
-	case types.TypeFitScaleDown:
-		imgResize = imaging.Fit(img, opts.Width, opts.Height, imaging.Lanczos)
-	default:
+	case types.TypeResize:
 		imgResize = imaging.Resize(img, opts.Width, opts.Height, imaging.Lanczos)
+	default: // types.TypeFitScaleDown
+		imgResize = imaging.Fit(img, opts.Width, opts.Height, imaging.Lanczos)
 	}
 
 	return imgResize

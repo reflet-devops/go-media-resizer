@@ -67,6 +67,7 @@ const (
 
 	TypeFitCrop      = "crop"
 	TypeFitScaleDown = "scale-down"
+	TypeResize       = "resize"
 )
 
 var (

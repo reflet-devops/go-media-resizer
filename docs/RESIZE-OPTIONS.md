@@ -194,8 +194,8 @@ Content-Type: image/avif
 ### Fit
 **Type:** String  
 **Values:** `"resize"`, `"crop"`, `"scale-down"`  
-**Default:** `""`  
-**CDN-CGI:** `fit=crop`
+**Default:** `"scale-down"`
+**CDN-CGI:** `fit=scale-down`
 
 Controls how the image is resized when both width and height are specified.
 
@@ -221,11 +221,26 @@ default_resize:
 fit: "resize"  # Result: 400x320 (maintains ratio)
 ```
 
+**`resize`**
+- Resizes the image to the exact specified dimensions using Lanczos algorithm
+- Does not preserve the original aspect ratio when both width and height are provided
+- The image will be stretched or compressed to match the target dimensions
+- If only one dimension is provided (width or height), the other is calculated proportionally
+
+```yaml
+# Example: 1000x800 image → 400x400
+fit: "resize"  # Result: 400x400 (stretched to fill exact dimensions)
+
+# Example: 1000x800 image → width=400, height=0
+fit: "resize"  # Result: 400x320 (height calculated proportionally)
+```
+
 **`crop`**
 - Crops image to exact dimensions
 - Centers the crop area
 - Always produces exact width×height output
 - May cut off parts of the image
+- If only one dimension is provided (width or height = 0), falls back to `resize` behavior automatically (proportional resize on the provided dimension)
 
 ```yaml
 # Example: 1000x800 image → 400x400  
@@ -237,6 +252,7 @@ fit: "crop"    # Result: 400x400
 - Only reduces size, never enlarges
 - Maintains original aspect ratio
 - If image is smaller than dimensions, returns unchanged
+- If only one dimension is provided (width or height = 0), falls back to `resize` behavior automatically (proportional resize on the provided dimension)
 
 ```yaml
 # Example: 1000x800 image → 400x400
