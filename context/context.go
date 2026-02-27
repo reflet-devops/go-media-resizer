@@ -81,7 +81,7 @@ func DefaultContext() *Context {
 		Config:          config.DefaultConfig(),
 		MetricsRegistry: prometheus.NewRegistry(),
 		BufferPool: &sync.Pool{
-			New: func() interface{} { return bytes.NewBuffer(make([]byte, 0, 1024*1024)) },
+			New: func() interface{} { return bytes.NewBuffer(make([]byte, 0, 5*1024*1024)) },
 		},
 		OptsResizePool: &sync.Pool{
 			New: func() interface{} { return &types.ResizeOption{} },

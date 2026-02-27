@@ -62,8 +62,7 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to transform image %s", opts.Source))
 		}
 	}
-
-	contentHash, _ := hash.GenerateMD5FromBytes(content.Bytes())
+	contentHash, _ := hash.GenerateXXHashFromBytes(content.Bytes())
 
 	c.Response().Header().Add(echo.HeaderContentLength, strconv.Itoa(content.Len()))
 	c.Response().Header().Add("Date", time.Now().In(TimeLocationGMT).Format(time.RFC1123))

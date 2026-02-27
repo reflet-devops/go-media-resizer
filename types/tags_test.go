@@ -14,7 +14,7 @@ func TestFormatTag(t *testing.T) {
 
 func TestGetTagSourcePathHash(t *testing.T) {
 	got := GetTagSourcePathHash("app/text.txt")
-	assert.Equal(t, fmt.Sprintf("%s_6ef8503f220bb4c34d072bddc808f136", TagSourcePathHash), got)
+	assert.Equal(t, fmt.Sprintf("%s_6a3556ff8861e30b", TagSourcePathHash), got)
 }
 
 func TestFormatProjectPathHash(t *testing.T) {

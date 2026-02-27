@@ -1,8 +1,9 @@
 package hash
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 /*func TestGenerateMD5_Success(t *testing.T) {
