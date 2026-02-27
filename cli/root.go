@@ -1,12 +1,14 @@
 package cli
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"reflect"
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
@@ -77,6 +79,10 @@ func GetRootPreRunEFn(ctx *context.Context, validateCfg bool) func(*cobra.Comman
 			ctx.LogLevel.Set(level)
 		}
 
+		ctx.Logger.Info(fmt.Sprintf("cfg: buffer pool size is set to %dMo", ctx.Config.BufferPoolSize))
+		ctx.BufferPool = &sync.Pool{
+			New: func() interface{} { return bytes.NewBuffer(make([]byte, 0, ctx.Config.BufferPoolSize*1024*1024)) },
+		}
 		ctx.Config.AcceptTypeFiles = append(ctx.Config.AcceptTypeFiles, ctx.Config.ResizeTypeFiles...)
 
 		errPreparePrj := prepareProject(ctx)

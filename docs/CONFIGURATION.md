@@ -50,6 +50,10 @@ headers:
 # HTTP request timeout
 request_timeout: "2s"
 
+# Buffer pool size in MB (default: 5)
+# Controls the size of pre-allocated byte buffers used for image processing
+buffer_pool_size: 5
+
 # CDN-CGI configuration (optional)
 resize_cgi:
   enabled: true
@@ -539,6 +543,7 @@ headers:
   x-powered-by: "go-media-resizer"
 
 request_timeout: "10s"
+buffer_pool_size: 5
 
 enable_format_auto_avif: true
 

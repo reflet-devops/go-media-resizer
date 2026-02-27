@@ -1,9 +1,10 @@
 package config
 
 import (
+	"testing"
+
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -34,6 +35,7 @@ func TestDefaultConfig(t *testing.T) {
 			},
 			Headers:        types.Headers{},
 			RequestTimeout: DefaultRequestTimeout,
+			BufferPoolSize: DefaultBufferPoolSize,
 		},
 		got,
 	)

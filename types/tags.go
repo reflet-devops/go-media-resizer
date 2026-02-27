@@ -12,7 +12,7 @@ const (
 )
 
 func GetTagSourcePathHash(value string) string {
-	sourcePathHash, _ := hash.GenerateMD5FromString(value)
+	sourcePathHash, _ := hash.GenerateXXHashFromString(value)
 	return FormatTag(TagSourcePathHash, sourcePathHash)
 }
 

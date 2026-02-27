@@ -59,9 +59,17 @@ Example regex: `^/test/((?<width>[0-9]{1,4})?(x(?<height>[0-9]{1,4}))?(-(?<quali
 ## Configuration
 
 Configuration uses YAML files with the following structure:
-- Global settings (headers, file types, timeouts)
+- Global settings (headers, file types, timeouts, buffer pool size)
 - HTTP server configuration
 - CDN-CGI endpoint configuration
 - Per-project settings (hostname, storage, endpoints, cache purging)
+
+### Buffer Pool Size
+
+The `buffer_pool_size` setting (in MB) controls the size of pre-allocated byte buffers used for image processing. Default is **5 MB**. Configurable in the global section of the YAML configuration:
+
+```yaml
+buffer_pool_size: 5
+```
 
 Reference configuration: `tmp/config.yml`

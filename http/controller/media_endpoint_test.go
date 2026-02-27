@@ -77,7 +77,7 @@ func Test_GetMedia(t *testing.T) {
 				assert.Equal(t, http.StatusOK, rec.Code)
 				assert.Contains(t, rec.Header().Get(echo.HeaderContentType), types.MimeTypeText)
 				assert.Contains(t, rec.Header().Get(route.ProjectIdHeader), "project-id")
-				assert.Contains(t, rec.Header().Get(route.CacheTagHeader), "source_path_hash_4b8d00178d179318c1e162ff5ef84a9d")
+				assert.Contains(t, rec.Header().Get(route.CacheTagHeader), "source_path_hash_3e79a79cb183f130")
 				assert.Equal(t, "hello world", rec.Body.String())
 			},
 		},

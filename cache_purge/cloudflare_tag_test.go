@@ -107,7 +107,7 @@ func Test_cloudflareTag_Purge(t *testing.T) {
 			events:     types.Events{{Type: types.EventTypePurge, Path: "test/text.txt"}},
 			mockFn: func(mockClient *mockTypes.MockClient) {
 				mockClient.EXPECT().DoTimeout(gomock.Cond(func(req *fasthttp.Request) bool {
-					if !bytes.Equal(req.Body(), []byte(`{"tags":["source_path_hash_c6047f34708c36213118502d98d05466"]}`)) {
+					if !bytes.Equal(req.Body(), []byte(`{"tags":["source_path_hash_df781cc81757931f"]}`)) {
 						return false
 					}
 					return true
@@ -127,7 +127,7 @@ func Test_cloudflareTag_Purge(t *testing.T) {
 			events:     types.Events{{Type: types.EventTypePurge, Path: "test/text.txt"}},
 			mockFn: func(mockClient *mockTypes.MockClient) {
 				mockClient.EXPECT().DoTimeout(gomock.Cond(func(req *fasthttp.Request) bool {
-					if !bytes.Equal(req.Body(), []byte(`{"tags":["source_path_hash_b7c209b0abcb1d2bc96952a8a512ee12"]}`)) {
+					if !bytes.Equal(req.Body(), []byte(`{"tags":["source_path_hash_0d4ca1fa31a01680"]}`)) {
 						return false
 					}
 					return true
