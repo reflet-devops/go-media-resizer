@@ -8,6 +8,7 @@ import (
 )
 
 const DefaultRequestTimeout = 2 * time.Second
+const DefaultBufferPoolSize = 5 // Value in Mo
 
 type Config struct {
 	HTTP HTTPConfig `mapstructure:"http" validate:"required"`
@@ -20,6 +21,7 @@ type Config struct {
 	Headers              types.Headers   `mapstructure:"headers"`
 	RequestTimeout       time.Duration   `mapstructure:"request_timeout"`
 	Projects             []Project       `mapstructure:"projects" validate:"unique-project-cfg,required,unique=ID,min=1,dive"`
+	BufferPoolSize       int             `mapstructure:"buffer_pool_size" validate:"min=1"`
 }
 
 type Project struct {
@@ -123,5 +125,6 @@ func DefaultConfig() *Config {
 		},
 		Headers:        types.Headers{},
 		RequestTimeout: DefaultRequestTimeout,
+		BufferPoolSize: DefaultBufferPoolSize,
 	}
 }

@@ -3,7 +3,7 @@ package hash
 import (
 	"encoding/hex"
 
-	"github.com/cespare/xxhash"
+	"github.com/cespare/xxhash/v2"
 )
 
 func GenerateXXHashFromString(content string) (string, error) {

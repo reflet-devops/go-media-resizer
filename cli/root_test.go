@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -295,14 +296,15 @@ func Test_prepareProject_validRegexTest_Fail(t *testing.T) {
 }
 
 func TestGetRootPreRunEFn_Success(t *testing.T) {
-	ctx := context.TestContext(nil)
+	buff := bytes.NewBufferString("")
+	ctx := context.TestContext(buff)
 	ctx.WorkingDir = "/app"
 	cmd := GetRootCmd(ctx)
 	cmd.SetOut(io.Discard)
 	cmd.SetErr(io.Discard)
 	path := ctx.WorkingDir
 	_ = ctx.Fs.Mkdir(path, 0775)
-	globalStr := "accept_type_files: ['txt']\nresize_type_files: ['png']"
+	globalStr := "accept_type_files: ['txt']\nresize_type_files: ['png']\nbuffer_pool_size: 7"
 	projectStr1 := "{id: test, hostname: foo.com, storage: {type: foo}, endpoints: [{regex: '/(?<source>.*)'}]}"
 	projectStr2 := "{id: test2, hostname: bar.com, storage: {type: foo}}"
 	projectStr := "projects: [" + projectStr1 + "," + projectStr2 + "]"
@@ -312,6 +314,7 @@ func TestGetRootPreRunEFn_Success(t *testing.T) {
 	err := GetRootPreRunEFn(ctx, true)(cmd, []string{})
 	assert.NoError(t, err)
 	assert.Equal(t, "LevelVar(INFO)", ctx.LogLevel.String())
+	assert.Contains(t, buff.String(), "cfg: buffer pool size is set to 7Mo")
 }
 
 func TestGetRootPreRunEFn_SuccessLogLevelFlag(t *testing.T) {

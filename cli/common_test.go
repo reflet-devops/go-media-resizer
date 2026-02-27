@@ -2,11 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func Test_validateConfig(t *testing.T) {
@@ -24,6 +25,7 @@ func Test_validateConfig(t *testing.T) {
 				AcceptTypeFiles: []string{types.TypeText},
 				ResizeTypeFiles: []string{types.TypePNG},
 				RequestTimeout:  config.DefaultRequestTimeout,
+				BufferPoolSize:  config.DefaultBufferPoolSize,
 				Projects:        []config.Project{{ID: "id", Hostname: "hostname", Storage: config.StorageConfig{Type: "fake"}, Endpoints: []config.Endpoint{{}}}},
 			},
 			wantErr: assert.NoError,
