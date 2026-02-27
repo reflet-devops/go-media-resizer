@@ -33,7 +33,7 @@ func (v cloudflareTag) Purge(events types.Events) {
 	for _, event := range events {
 		fullPath := urltools.FormatPathWithPrefix(v.projectCfg.PrefixPath, event.Path)
 		opts := CloudflareCachePurge{
-			Tags: []string{types.GetTagSourcePathHash(types.FormatProjectPathHash(v.projectCfg.ID, fullPath))},
+			Tags: types.GetTagsSourcePathHash(types.FormatProjectPathHash(v.projectCfg.ID, fullPath)),
 		}
 		CloudflareDoRequest(
 			v.ctx,
