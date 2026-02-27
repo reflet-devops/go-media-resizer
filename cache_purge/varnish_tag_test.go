@@ -99,7 +99,7 @@ func Test_varnishTag_Purge(t *testing.T) {
 						return false
 					}
 
-					if string(req.Header.Peek(types.HeaderCachePurge)) != "(source_path_hash_df781cc81757931f)" {
+					if string(req.Header.Peek(types.HeaderCachePurge)) != "(source_path_hash_df781cc81757931f|source_path_hash_c6047f34708c36213118502d98d05466)" {
 						return false
 					}
 					return true
@@ -126,7 +126,7 @@ func Test_varnishTag_Purge(t *testing.T) {
 						return false
 					}
 
-					if string(req.Header.Peek(types.HeaderCachePurge)) != "(source_path_hash_0d4ca1fa31a01680)" {
+					if string(req.Header.Peek(types.HeaderCachePurge)) != "(source_path_hash_0d4ca1fa31a01680|source_path_hash_b7c209b0abcb1d2bc96952a8a512ee12)" {
 						return false
 					}
 					return true

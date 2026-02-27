@@ -16,6 +16,13 @@ func GetTagSourcePathHash(value string) string {
 	return FormatTag(TagSourcePathHash, sourcePathHash)
 }
 
+func GetTagsSourcePathHash(value string) []string {
+	xxhashTag := GetTagSourcePathHash(value)
+	md5Hash, _ := hash.GenerateMD5FromString(value)
+	md5Tag := FormatTag(TagSourcePathHash, md5Hash)
+	return []string{xxhashTag, md5Tag}
+}
+
 func FormatProjectPathHash(projectId string, source string) string {
 	return fmt.Sprintf("%s_%s", strings.TrimSpace(projectId), strings.Trim(source, "/"))
 }

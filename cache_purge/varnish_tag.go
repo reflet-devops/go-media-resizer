@@ -35,9 +35,10 @@ func (v varnishTag) Type() string {
 func (v varnishTag) Purge(events types.Events) {
 	for _, event := range events {
 		fullPath := urltools.FormatPathWithPrefix(v.projectCfg.PrefixPath, event.Path)
+		tags := types.GetTagsSourcePathHash(types.FormatProjectPathHash(v.projectCfg.ID, fullPath))
 		headers := map[string]string{
 			types.HeaderCachePurge: fmt.Sprintf(
-				"(%s)", types.GetTagSourcePathHash(types.FormatProjectPathHash(v.projectCfg.ID, fullPath)),
+				"(%s)", strings.Join(tags, "|"),
 			),
 		}
 		VarnishDoRequest(
