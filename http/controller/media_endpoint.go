@@ -19,7 +19,10 @@ import (
 func GetMedia(ctx *context.Context, project *config.Project, storage types.Storage) func(c echo.Context) error {
 	return func(c echo.Context) error {
 
-		requestPath := strings.Replace(c.Request().RequestURI, fmt.Sprintf("/%s", project.PrefixPath), "", 1)
+		requestPath := c.Request().RequestURI
+		if project.PrefixPath != "" {
+			requestPath = strings.Replace(requestPath, fmt.Sprintf("/%s", project.PrefixPath), "", 1)
+		}
 		for _, endpoint := range project.Endpoints {
 			opts := ctx.OptsResizePool.Get().(*types.ResizeOption)
 			found, errMatch := parser.ParseOption(&endpoint, project, requestPath, opts)
