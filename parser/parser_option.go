@@ -21,7 +21,7 @@ func ParseOption(endpoint *config.Endpoint, projectCfg *config.Project, uri stri
 	}
 
 	if endpoint.CompiledRegex == nil {
-		opts.Source = path
+		opts.Source = strings.TrimLeft(path, "/")
 		opts.OriginFormat = originType
 		for k, v := range projectCfg.Headers {
 			opts.AddHeader(k, v)
@@ -57,7 +57,7 @@ func ParseOption(endpoint *config.Endpoint, projectCfg *config.Project, uri stri
 		return true, err
 	}
 
-	opts.Source = strings.Split(opts.Source, "?")[0]
+	opts.Source = strings.TrimLeft(strings.Split(opts.Source, "?")[0], "/")
 
 	return true, nil
 }

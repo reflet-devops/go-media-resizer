@@ -54,7 +54,6 @@ func GetMedia(ctx *context.Context, project *config.Project, storage types.Stora
 				types.FormatProjectPathHash(project.ID, urltools.FormatPathWithPrefix(project.PrefixPath, opts.Source))),
 			)
 			opts.AddHeader(route.ProjectIdHeader, project.ID)
-
 			return SendStream(ctx, c, opts, buffer)
 		}
 		return c.String(http.StatusNotFound, "file not found")
