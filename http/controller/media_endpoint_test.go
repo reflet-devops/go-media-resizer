@@ -57,7 +57,7 @@ func Test_GetMedia(t *testing.T) {
 	}{
 		{
 			name:     "success",
-			resource: "resource.txt",
+			resource: "path/resource.txt",
 			prjConf: &config.Project{
 				ID:              "project-id",
 				AcceptTypeFiles: []string{types.TypeText},
@@ -71,13 +71,40 @@ func Test_GetMedia(t *testing.T) {
 			},
 			mockFn: func(mockStorage *mockTypes.MockStorage) {
 				b := io.NopCloser(bytes.NewBufferString("hello world"))
-				mockStorage.EXPECT().GetFile(gomock.Eq("resource.txt")).Times(1).Return(b, nil)
+				mockStorage.EXPECT().GetFile(gomock.Eq("path/resource.txt")).Times(1).Return(b, nil)
 			},
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusOK, rec.Code)
 				assert.Contains(t, rec.Header().Get(echo.HeaderContentType), types.MimeTypeText)
 				assert.Contains(t, rec.Header().Get(route.ProjectIdHeader), "project-id")
-				assert.Contains(t, rec.Header().Get(route.CacheTagHeader), "source_path_hash_3e79a79cb183f130")
+				assert.Contains(t, rec.Header().Get(route.CacheTagHeader), "source_path_hash_61ae17d201ab255b")
+				assert.Equal(t, "hello world", rec.Body.String())
+			},
+		},
+		{
+			name:     "successWithPrefix",
+			resource: "prefix/path/resource.txt",
+			prjConf: &config.Project{
+				ID:              "project-id",
+				AcceptTypeFiles: []string{types.TypeText},
+				PrefixPath:      "prefix",
+				Endpoints: []config.Endpoint{
+					{
+						Regex:             "",
+						DefaultResizeOpts: types.ResizeOption{},
+						CompiledRegex:     nil,
+					},
+				},
+			},
+			mockFn: func(mockStorage *mockTypes.MockStorage) {
+				b := io.NopCloser(bytes.NewBufferString("hello world"))
+				mockStorage.EXPECT().GetFile(gomock.Eq("path/resource.txt")).Times(1).Return(b, nil)
+			},
+			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusOK, rec.Code)
+				assert.Contains(t, rec.Header().Get(echo.HeaderContentType), types.MimeTypeText)
+				assert.Contains(t, rec.Header().Get(route.ProjectIdHeader), "project-id")
+				assert.Contains(t, rec.Header().Get(route.CacheTagHeader), "source_path_hash_3a2ab41098c5a6d9")
 				assert.Equal(t, "hello world", rec.Body.String())
 			},
 		},
@@ -104,7 +131,7 @@ func Test_GetMedia(t *testing.T) {
 		},
 		{
 			name:     "success_NoEndpoint",
-			resource: "resource.txt",
+			resource: "path/resource.txt",
 			prjConf: &config.Project{
 				ID:              "project-id",
 				AcceptTypeFiles: []string{types.TypeText},
@@ -119,7 +146,7 @@ func Test_GetMedia(t *testing.T) {
 		},
 		{
 			name:     "fail_fileTypeNotAcceptedFail",
-			resource: "resource.txt",
+			resource: "path/resource.txt",
 			prjConf: &config.Project{
 				ID:              "project-id",
 				AcceptTypeFiles: []string{types.TypePNG},
@@ -140,7 +167,7 @@ func Test_GetMedia(t *testing.T) {
 		},
 		{
 			name:     "fail_GetFile",
-			resource: "resource.txt",
+			resource: "path/resource.txt",
 			prjConf: &config.Project{
 				ID:              "project-id",
 				AcceptTypeFiles: []string{types.TypeText},
@@ -153,7 +180,7 @@ func Test_GetMedia(t *testing.T) {
 				},
 			},
 			mockFn: func(mockStorage *mockTypes.MockStorage) {
-				mockStorage.EXPECT().GetFile(gomock.Eq("resource.txt")).Times(1).Return(nil, errors.New("file not found"))
+				mockStorage.EXPECT().GetFile(gomock.Eq("path/resource.txt")).Times(1).Return(nil, errors.New("file not found"))
 			},
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusNotFound, rec.Code)
@@ -163,7 +190,7 @@ func Test_GetMedia(t *testing.T) {
 		},
 		{
 			name:     "fail_Copy",
-			resource: "resource.txt",
+			resource: "path/resource.txt",
 			prjConf: &config.Project{
 				ID:              "project-id",
 				AcceptTypeFiles: []string{types.TypeText},
@@ -176,7 +203,7 @@ func Test_GetMedia(t *testing.T) {
 				},
 			},
 			mockFn: func(mockStorage *mockTypes.MockStorage) {
-				mockStorage.EXPECT().GetFile(gomock.Eq("resource.txt")).Times(1).Return(&errorReader{r: bytes.NewBufferString("test")}, nil)
+				mockStorage.EXPECT().GetFile(gomock.Eq("path/resource.txt")).Times(1).Return(&errorReader{r: bytes.NewBufferString("test")}, nil)
 			},
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusInternalServerError, rec.Code)

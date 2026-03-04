@@ -140,7 +140,7 @@ func Test_prepareProject_Success(t *testing.T) {
 					{
 						Regex: regexStr,
 						RegexTests: []config.RegexTest{
-							{Path: "/test.png", ResultOpts: types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/test.png"}},
+							{Path: "/test.png", ResultOpts: types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "test.png"}},
 						},
 					},
 				},
@@ -198,7 +198,7 @@ func Test_prepareProject_Success(t *testing.T) {
 					CompiledRegex:     re,
 					DefaultResizeOpts: types.ResizeOption{Format: types.TypeFormatAuto},
 					RegexTests: []config.RegexTest{
-						{Path: "/test.png", ResultOpts: types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/test.png"}},
+						{Path: "/test.png", ResultOpts: types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "test.png"}},
 					},
 				},
 			},
@@ -416,7 +416,7 @@ func Test_validRegexTest(t *testing.T) {
 			endpoint: config.Endpoint{
 				Regex: "(?<source>.*)",
 				RegexTests: []config.RegexTest{
-					{Path: "/media/image.png", ResultOpts: types.ResizeOption{OriginFormat: types.TypePNG, Source: "/media/image.png"}},
+					{Path: "/media/image.png", ResultOpts: types.ResizeOption{OriginFormat: types.TypePNG, Source: "media/image.png"}},
 				},
 			},
 			wantErr: false,
@@ -427,7 +427,7 @@ func Test_validRegexTest(t *testing.T) {
 			endpoint: config.Endpoint{
 				Regex: "(\\/(?<width>[0-9]{1,4})?(x(?<height>[0-9]{1,4}))?)(?<source>.*)",
 				RegexTests: []config.RegexTest{
-					{Path: "/500x500/media/image.png", ResultOpts: types.ResizeOption{OriginFormat: types.TypePNG, Source: "/media/image.png", Width: 500, Height: 500}},
+					{Path: "/500x500/media/image.png", ResultOpts: types.ResizeOption{OriginFormat: types.TypePNG, Source: "media/image.png", Width: 500, Height: 500}},
 				},
 			},
 			wantErr: false,
