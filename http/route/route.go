@@ -5,8 +5,9 @@ const (
 	CgiExtraResizeRoute  = "/cdn-cgi/image/:options/:source"
 	MetricsRoute         = "/metrics"
 
-	ProjectIdHeader = "X-Project-Id"
-	CacheTagHeader  = "Cache-Tag"
+	ProjectIdHeader  = "X-Project-Id"
+	CacheTagHeader   = "Cache-Tag"
+	DebugInfoHeader  = "X-Debug-Info"
 )
 
 var MandatoryRoutes = []string{

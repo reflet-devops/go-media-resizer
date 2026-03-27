@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/hash"
 	"github.com/reflet-devops/go-media-resizer/http/route"
@@ -54,9 +55,20 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 	acceptHeaderValue := c.Request().Header.Get(echo.HeaderAccept)
 	DetectFormatFromHeaderAccept(ctx, acceptHeaderValue, opts)
 
-	if opts.NeedTransform() && slices.Contains(ctx.Config.ResizeTypeFiles, opts.OriginFormat) {
-		var errTransform error
-		errTransform = transform.Transform(content, opts)
+	needTransform := opts.NeedTransform() && slices.Contains(ctx.Config.ResizeTypeFiles, opts.OriginFormat)
+	if needTransform {
+		sourceLimit := ctx.Config.SourceLimit
+		if errValidate := transform.ValidateSourceDimensions(content, sourceLimit); errValidate != nil {
+			ctx.Logger.Error(fmt.Sprintf("failed to validate image %s: %v", opts.Source, errValidate), addLogAttr(c)...)
+			c.Response().Header().Add(route.DebugInfoHeader, errValidate.Error())
+			if sourceLimit.Mode == config.SourceLimitModeError {
+				return c.String(http.StatusUnprocessableEntity, fmt.Sprintf("image too large: %s", opts.Source))
+			}
+			needTransform = false
+		}
+	}
+	if needTransform {
+		errTransform := transform.Transform(content, opts)
 		if errTransform != nil {
 			ctx.Logger.Error(fmt.Sprintf("failed to read data %s: %v", opts.Source, errTransform), addLogAttr(c)...)
 			return c.String(http.StatusInternalServerError, fmt.Sprintf("failed to transform image %s", opts.Source))

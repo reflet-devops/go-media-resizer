@@ -54,6 +54,12 @@ request_timeout: "2s"
 # Controls the size of pre-allocated byte buffers used for image processing
 buffer_pool_size: 5
 
+# Source image dimension limits (see Source Limit section)
+source_limit:
+  mode: "off"
+  max_width: 4096
+  max_height: 4096
+
 # CDN-CGI configuration (optional)
 resize_cgi:
   enabled: true
@@ -196,6 +202,45 @@ default_resize:
 - `saturation`: Saturation adjustment (-100 to 100, 0 = no change)  
 - `sharpen`: Sharpening amount (0 = no sharpening, typical range: 0.5-3.0)
 - `gamma`: Gamma correction (1.0 = no correction, typical range: 0.5-2.5)
+
+## Source Limit Configuration
+
+Resizing images with very large dimensions (e.g. 18000x18000) can consume a significant amount of RAM, as the full image must be decoded into memory before processing. The `source_limit` configuration allows you to control the behavior when the source image exceeds the specified dimensions.
+
+```yaml
+source_limit:
+  mode: "off"         # Limit mode: off, passthrough, error
+  max_width: 4096     # Maximum allowed width in pixels (default: 4096)
+  max_height: 4096    # Maximum allowed height in pixels (default: 4096)
+```
+
+The dimension check is performed before decoding the full image (using only the image headers), so it does not incur additional memory usage.
+
+### Modes
+
+| Mode | Description |
+|------|-------------|
+| `off` | No dimension check is performed. All images are resized regardless of their dimensions. This is the default. |
+| `passthrough` | Images exceeding the limits are served in their original form without any transformation. A `X-Debug-Info` response header is added with the validation error message for debugging purposes. |
+| `error` | Images exceeding the limits are rejected with an HTTP 422 (Unprocessable Entity) response. A `X-Debug-Info` response header is also added with the validation error message. |
+
+### Example
+
+With `mode: "error"` and `max_width: 4096`, `max_height: 4096`, uploading a 18000x12000 image and requesting a resize will return:
+
+```
+HTTP/1.1 422 Unprocessable Entity
+X-Debug-Info: source image dimensions 18000x12000 exceed maximum allowed 4096x4096
+
+image too large: /path/to/image.jpg
+```
+
+With `mode: "passthrough"`, the same request will return the original image with the header:
+
+```
+HTTP/1.1 200 OK
+X-Debug-Info: source image dimensions 18000x12000 exceed maximum allowed 4096x4096
+```
 
 ## Storage Configuration
 
@@ -544,6 +589,10 @@ headers:
 
 request_timeout: "10s"
 buffer_pool_size: 5
+source_limit:
+  mode: "error"
+  max_width: 4096
+  max_height: 4096
 
 enable_format_auto_avif: true
 
