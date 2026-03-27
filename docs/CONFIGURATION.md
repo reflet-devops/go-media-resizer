@@ -173,7 +173,7 @@ default_resize:
   width: 800           # Width in pixels
   height: 600          # Height in pixels
   quality: 85          # JPEG quality (1-100)
-  fit: "crop"          # Resize method: crop, resize, scale-down (default)
+  fit: "crop"          # Resize method: crop, cover, contain, scale-down (default), pad, resize
   
   # Image adjustment parameters
   blur: 2.5            # Blur radius (0 = no blur)
@@ -192,8 +192,12 @@ default_resize:
 - `avif`: AVIF format (requires libaom-dev)
 
 **Resize Methods:**
-- `resize` (default): Proportional resizing with Lanczos algorithm
-- `crop`: Center crop to exact dimensions
+- `scale-down` (default): Scales image down proportionally to fit within the specified dimensions. If the image is already smaller, it fills the missing dimension from the original size
+- `crop`: Crops the image to exact dimensions from the center. If the image is smaller than the target, it crops without upscaling. Missing width or height is filled from the original
+- `cover`: Resizes and crops to fill the exact dimensions, always upscaling if needed. Missing width or height is filled from the original
+- `contain`: Resizes proportionally to fit within the specified dimensions without cropping. With only one dimension, behaves like `resize`
+- `pad`: Resizes proportionally to fit within the specified dimensions and pads with a transparent background to reach the exact target size. Missing width or height is filled from the original
+- `resize`: Direct resize with Lanczos algorithm. Stretches to exact width/height if both are given, or scales proportionally if only one is provided
 
 **Image Adjustment Parameters:**
 - `blur`: Blur radius in pixels (0 = no blur, typical range: 0.5-5.0)
@@ -477,7 +481,7 @@ GET /cdn-cgi/image/width=500,blur=2.0,brightness=10,contrast=15/https://example.
 - `height`: Height in pixels
 - `quality`: JPEG quality (1-100)
 - `format`: Output format (auto, jpeg, png, webp, avif)
-- `fit`: Resize method (crop or resize)
+- `fit`: Resize method (crop, cover, contain, scale-down, pad, resize)
 - `blur`: Blur radius (0 = no blur)
 - `brightness`: Brightness adjustment (-100 to 100)
 - `contrast`: Contrast adjustment (-100 to 100)

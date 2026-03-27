@@ -10,7 +10,7 @@ This document describes all available options for image transformation in the `R
 | `height` | Integer | Image height in pixels | 0 (original) | ✅ |
 | `quality` | Integer | JPEG compression quality (1-100) | 0 (default) | ✅ |
 | `format` | String | Output image format | `"auto"` | ✅ |
-| `fit` | String | Resize method | `"resize"` | ✅ |
+| `fit` | String | Resize method | `"scale-down"` | ✅ |
 | `blur` | Float | Blur radius | 0 (no blur) | ✅ |
 | `brightness` | Float | Brightness adjustment | 0 (no change) | ✅ |
 | `contrast` | Float | Contrast adjustment | 0 (no change) | ✅ |
@@ -44,7 +44,7 @@ default_resize:
 **Behavior:**
 - `0`: Keep original width
 - `> 0`: Resize to specified width
-- When only width is specified, height is calculated proportionally (unless `fit: "crop"`)
+- When only width is specified, height is calculated proportionally
 - Maximum supported width: 9999 pixels
 
 ---
@@ -73,7 +73,7 @@ default_resize:
 **Behavior:**
 - `0`: Keep original height
 - `> 0`: Resize to specified height
-- When only height is specified, width is calculated proportionally (unless `fit: "crop"`)
+- When only height is specified, width is calculated proportionally
 - Maximum supported height: 9999 pixels
 
 ---
@@ -192,12 +192,12 @@ Content-Type: image/avif
 ---
 
 ### Fit
-**Type:** String  
-**Values:** `"resize"`, `"crop"`, `"scale-down"`  
+**Type:** String
+**Values:** `"scale-down"`, `"contain"`, `"cover"`, `"crop"`, `"pad"`, `"resize"`
 **Default:** `"scale-down"`
 **CDN-CGI:** `fit=scale-down`
 
-Controls how the image is resized when both width and height are specified.
+Controls how the image is resized. All fit modes accept a single dimension (width or height); when a dimension is missing, behavior depends on the mode.
 
 ```yaml
 # Configuration
@@ -210,66 +210,116 @@ default_resize:
 
 #### Fit Options
 
-**`Default`** (empty value)
-- Proportional resizing using Lanczos algorithm
-- Maintains aspect ratio
-- Image fits within specified dimensions
-- May not fill exact width×height if aspect ratios differ
-
-```yaml
-# Example: 1000x800 image → 400x400
-fit: "resize"  # Result: 400x320 (maintains ratio)
-```
-
-**`resize`**
-- Resizes the image to the exact specified dimensions using Lanczos algorithm
-- Does not preserve the original aspect ratio when both width and height are provided
-- The image will be stretched or compressed to match the target dimensions
-- If only one dimension is provided (width or height), the other is calculated proportionally
-
-```yaml
-# Example: 1000x800 image → 400x400
-fit: "resize"  # Result: 400x400 (stretched to fill exact dimensions)
-
-# Example: 1000x800 image → width=400, height=0
-fit: "resize"  # Result: 400x320 (height calculated proportionally)
-```
-
-**`crop`**
-- Crops image to exact dimensions
-- Centers the crop area
-- Always produces exact width×height output
-- May cut off parts of the image
-- If only one dimension is provided (width or height = 0), falls back to `resize` behavior automatically (proportional resize on the provided dimension)
-
-```yaml
-# Example: 1000x800 image → 400x400  
-fit: "crop"    # Result: 400x400
-```
-
-**`scale-down`**
-- Scales image to fit within dimensions
-- Only reduces size, never enlarges
+**`scale-down`** (default)
+- Scales image proportionally to fit within dimensions
+- Never enlarges the image
 - Maintains original aspect ratio
-- If image is smaller than dimensions, returns unchanged
-- If only one dimension is provided (width or height = 0), falls back to `resize` behavior automatically (proportional resize on the provided dimension)
+- If image is already smaller than dimensions, returns unchanged
+- If only one dimension is provided, the missing dimension defaults to the original image size
 
 ```yaml
 # Example: 1000x800 image → 400x400
 fit: "scale-down"    # Result: 400x320 (scaled to fit)
-```
 
-```yaml
 # Example: 300x200 image → 400x400
 fit: "scale-down"    # Result: 300x200 (unchanged, already smaller)
+
+# Example: 1000x800 image → width=400
+fit: "scale-down"    # Result: 400x320 (proportional)
 ```
+
+**`contain`**
+- Resizes image proportionally to fit within dimensions
+- Can enlarge the image if smaller than target
+- Maintains original aspect ratio
+- If only one dimension is provided, the other is calculated proportionally
+
+```yaml
+# Example: 1000x800 image → 400x400
+fit: "contain"    # Result: 400x320 (proportional, fits within box)
+
+# Example: 200x160 image → 400x400
+fit: "contain"    # Result: 400x320 (enlarged proportionally)
+
+# Example: 1000x800 image → width=400
+fit: "contain"    # Result: 400x320 (proportional)
+```
+
+**`cover`**
+- Resizes image to fill the entire target area, then crops the overflow
+- Can enlarge the image
+- Always produces exact width×height output when both are specified
+- If only one dimension is provided, the missing dimension defaults to the original image size
+
+```yaml
+# Example: 1000x800 image → 400x400
+fit: "cover"    # Result: 400x400 (resized + cropped center)
+
+# Example: 1000x800 image → width=400
+fit: "cover"    # Result: 400x800 (width resized, height = original)
+```
+
+**`crop`**
+- Same as `cover` but never enlarges the image
+- If the image is smaller than target, only crops without scaling up
+- Centers the crop area
+- If only one dimension is provided, the missing dimension defaults to the original image size
+
+```yaml
+# Example: 1000x800 image → 400x400
+fit: "crop"    # Result: 400x400 (scaled down + cropped)
+
+# Example: 300x200 image → 400x400
+fit: "crop"    # Result: 300x200 (not enlarged, cropped from center)
+
+# Example: 1000x800 image → width=400
+fit: "crop"    # Result: 400x800 (cropped to width, original height)
+```
+
+**`pad`**
+- Resizes image proportionally to fit within dimensions (can enlarge)
+- Pads the remaining space with a transparent background to produce exact width×height output
+- Maintains original aspect ratio
+- If only one dimension is provided, the missing dimension defaults to the original image size
+
+```yaml
+# Example: 1000x800 image → 400x400
+fit: "pad"    # Result: 400x400 (320x400 image centered on 400x400 transparent background)
+
+# Example: 1000x800 image → width=400
+fit: "pad"    # Result: 400x800 (proportional with transparent padding)
+```
+
+**`resize`**
+- Resizes the image to the exact specified dimensions
+- Does not preserve aspect ratio when both width and height are provided (stretches)
+- If only one dimension is provided, the other is calculated proportionally
+
+```yaml
+# Example: 1000x800 image → 400x400
+fit: "resize"  # Result: 400x400 (stretched to exact dimensions)
+
+# Example: 1000x800 image → width=400
+fit: "resize"  # Result: 400x320 (height calculated proportionally)
+```
+
+#### Comparison Table
+
+| Fit | Enlarges? | Crops? | Pads? | Preserves ratio? |
+|-----|-----------|--------|-------|------------------|
+| `scale-down` | No | No | No | Yes |
+| `contain` | Yes | No | No | Yes |
+| `cover` | Yes | Yes | No | Yes |
+| `crop` | No | Yes | No | Yes |
+| `pad` | Yes | No | Yes | Yes |
+| `resize` | Yes | No | No | Only with single dimension |
 
 #### Visual Examples
 
-| Original | `fit: ""` | `fit: "crop"` |
-|----------|-----------------|---------------|
-| 1200×800 → 400×400 | 400×267 (maintains ratio) | 400×400 (crops center) |
-| 800×1200 → 400×400 | 267×400 (maintains ratio) | 400×400 (crops center) |
+| Original | `fit: "scale-down"` | `fit: "contain"` | `fit: "cover"` | `fit: "crop"` | `fit: "pad"` | `fit: "resize"` |
+|----------|---------------------|-------------------|----------------|---------------|--------------|-----------------|
+| 1200×800 → 400×400 | 400×267 | 400×267 | 400×400 (cropped) | 400×400 (cropped) | 400×400 (padded) | 400×400 (stretched) |
+| 200×150 → 400×400 | 200×150 (unchanged) | 400×300 (enlarged) | 400×400 (enlarged+cropped) | 200×150 (unchanged) | 400×400 (enlarged+padded) | 400×400 (stretched) |
 
 ---
 

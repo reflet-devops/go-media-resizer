@@ -66,7 +66,10 @@ const (
 	TypeFormatAuto = "auto"
 
 	TypeFitCrop      = "crop"
+	TypeFitCover     = "cover"
+	TypeFitContain   = "contain"
 	TypeFitScaleDown = "scale-down"
+	TypeFitPad       = "pad"
 	TypeResize       = "resize"
 )
 
