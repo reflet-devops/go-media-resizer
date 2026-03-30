@@ -12,12 +12,28 @@ import (
 	"github.com/disintegration/imaging"
 	"github.com/gen2brain/avif"
 	"github.com/kolesa-team/go-webp/webp"
+	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/types"
 )
 
 var (
 	DefaultOptionAvif = avif.Options{Speed: avif.DefaultSpeed, Quality: avif.DefaultQuality}
 )
+
+func ValidateSourceDimensions(data *bytes.Buffer, sourceLimit config.SourceLimitConfig) error {
+	if sourceLimit.Mode == config.SourceLimitModeOff {
+		return nil
+	}
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(data.Bytes()))
+	if err != nil {
+		return fmt.Errorf("failed to read image dimensions: %w", err)
+	}
+	if cfg.Width > sourceLimit.MaxWidth || cfg.Height > sourceLimit.MaxHeight {
+		return fmt.Errorf("source image dimensions %dx%d exceed maximum allowed %dx%d", cfg.Width, cfg.Height, sourceLimit.MaxWidth, sourceLimit.MaxHeight)
+	}
+	return nil
+}
+
 
 func Transform(file *bytes.Buffer, opts *types.ResizeOption) error {
 	if !opts.NeedTransform() {

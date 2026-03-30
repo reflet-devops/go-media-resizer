@@ -26,6 +26,11 @@ func Test_validateConfig(t *testing.T) {
 				ResizeTypeFiles: []string{types.TypePNG},
 				RequestTimeout:  config.DefaultRequestTimeout,
 				BufferPoolSize:  config.DefaultBufferPoolSize,
+				SourceLimit: config.SourceLimitConfig{
+					Mode:      config.SourceLimitModeOff,
+					MaxWidth:  config.DefaultMaxSourceWidth,
+					MaxHeight: config.DefaultMaxSourceHeight,
+				},
 				Projects:        []config.Project{{ID: "id", Hostname: "hostname", Storage: config.StorageConfig{Type: "fake"}, Endpoints: []config.Endpoint{{}}}},
 			},
 			wantErr: assert.NoError,

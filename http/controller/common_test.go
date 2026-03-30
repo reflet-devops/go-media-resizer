@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
+	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/context"
 	"github.com/reflet-devops/go-media-resizer/http/route"
 	"github.com/reflet-devops/go-media-resizer/types"
@@ -115,6 +116,7 @@ func TestSendStream(t *testing.T) {
 		opts         *types.ResizeOption
 		headerAccept string
 		contentFn    func() *bytes.Buffer
+		sourceLimit  *config.SourceLimitConfig
 
 		wantErr assert.ErrorAssertionFunc
 		wantFn  func(t *testing.T, rec *httptest.ResponseRecorder)
@@ -173,24 +175,50 @@ func TestSendStream(t *testing.T) {
 			wantErr: assert.NoError,
 		},
 		{
-			name:         "failedTransform",
+			name:         "failedValidateDimensionsWithErrorMode",
 			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/paysage.png", Width: 500},
 			headerAccept: "image/avif,image/webp,image/png",
+			sourceLimit:  &config.SourceLimitConfig{Mode: config.SourceLimitModeError, MaxWidth: 4096, MaxHeight: 4096},
 			contentFn: func() *bytes.Buffer {
 				buff := bytes.NewBuffer([]byte("test"))
 				buff.Reset()
 				return buff
 			},
 			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
-				assert.Equal(t, http.StatusInternalServerError, rec.Code)
+				assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
 				assert.Contains(t, rec.Header().Get(echo.HeaderContentType), types.MimeTypeText)
-				assert.Equal(t, "failed to transform image /paysage.png", rec.Body.String())
+				assert.Equal(t, "image too large: /paysage.png", rec.Body.String())
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name:         "passthroughTransformWithPassthroughMode",
+			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/paysage.png", Width: 500},
+			headerAccept: "image/avif,image/webp,image/png",
+			sourceLimit:  &config.SourceLimitConfig{Mode: config.SourceLimitModePassthrough, MaxWidth: 1, MaxHeight: 1},
+			contentFn: func() *bytes.Buffer {
+				file, errOpen := os.Open("../../fixtures/paysage.png")
+				assert.NoError(t, errOpen)
+				buff := ctx.BufferPool.Get().(*bytes.Buffer)
+				_, _ = io.Copy(buff, file)
+				return buff
+			},
+			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusOK, rec.Code)
+				assert.NotEmpty(t, rec.Header().Get(route.DebugInfoHeader))
+				assert.NotEmpty(t, rec.Body.Bytes())
 			},
 			wantErr: assert.NoError,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.sourceLimit != nil {
+				origSourceLimit := ctx.Config.SourceLimit
+				ctx.Config.SourceLimit = *tt.sourceLimit
+				defer func() { ctx.Config.SourceLimit = origSourceLimit }()
+			}
+
 			e := echo.New()
 			e.HideBanner = true
 			e.HidePort = true

@@ -15,10 +15,76 @@ import (
 	"github.com/disintegration/imaging"
 	"github.com/gen2brain/avif"
 	"github.com/kolesa-team/go-webp/webp"
+	"github.com/reflet-devops/go-media-resizer/config"
 	"github.com/reflet-devops/go-media-resizer/hash"
 	"github.com/reflet-devops/go-media-resizer/types"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestValidateSourceDimensions(t *testing.T) {
+	createPNG := func(w, h int) *bytes.Buffer {
+		img := image.NewRGBA(image.Rect(0, 0, w, h))
+		buf := &bytes.Buffer{}
+		_ = imaging.Encode(buf, img, imaging.PNG)
+		return buf
+	}
+
+	tests := []struct {
+		name        string
+		data        *bytes.Buffer
+		sourceLimit config.SourceLimitConfig
+		wantErr     bool
+		errSubstr   string
+	}{
+		{
+			name: "modeOff",
+			data: createPNG(5000, 5000),
+			sourceLimit: config.SourceLimitConfig{Mode: config.SourceLimitModeOff, MaxWidth: 4096, MaxHeight: 4096},
+			wantErr: false,
+		},
+		{
+			name: "withinLimits",
+			data: createPNG(100, 100),
+			sourceLimit: config.SourceLimitConfig{Mode: config.SourceLimitModeError, MaxWidth: 4096, MaxHeight: 4096},
+			wantErr: false,
+		},
+		{
+			name: "exactLimits",
+			data: createPNG(4096, 4096),
+			sourceLimit: config.SourceLimitConfig{Mode: config.SourceLimitModeError, MaxWidth: 4096, MaxHeight: 4096},
+			wantErr: false,
+		},
+		{
+			name: "widthExceeded",
+			data: createPNG(4097, 100),
+			sourceLimit: config.SourceLimitConfig{Mode: config.SourceLimitModeError, MaxWidth: 4096, MaxHeight: 4096},
+			wantErr: true, errSubstr: "exceed maximum",
+		},
+		{
+			name: "heightExceeded",
+			data: createPNG(100, 4097),
+			sourceLimit: config.SourceLimitConfig{Mode: config.SourceLimitModePassthrough, MaxWidth: 4096, MaxHeight: 4096},
+			wantErr: true, errSubstr: "exceed maximum",
+		},
+		{
+			name: "invalidData",
+			data: bytes.NewBufferString("not an image"),
+			sourceLimit: config.SourceLimitConfig{Mode: config.SourceLimitModeError, MaxWidth: 4096, MaxHeight: 4096},
+			wantErr: true, errSubstr: "failed to read image dimensions",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateSourceDimensions(tt.data, tt.sourceLimit)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errSubstr)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
 
 func TestResize(t *testing.T) {
 	tests := []struct {

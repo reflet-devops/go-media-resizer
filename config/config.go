@@ -9,19 +9,34 @@ import (
 
 const DefaultRequestTimeout = 2 * time.Second
 const DefaultBufferPoolSize = 5 // Value in Mo
+const DefaultMaxSourceWidth = 4096
+const DefaultMaxSourceHeight = 4096
+
+const (
+	SourceLimitModeOff         = "off"
+	SourceLimitModePassthrough = "passthrough"
+	SourceLimitModeError       = "error"
+)
+
+type SourceLimitConfig struct {
+	Mode      string `mapstructure:"mode" validate:"required,oneof=off passthrough error"`
+	MaxWidth  int    `mapstructure:"max_width" validate:"required_unless=Mode off,omitempty,min=1"`
+	MaxHeight int    `mapstructure:"max_height" validate:"required_unless=Mode off,omitempty,min=1"`
+}
 
 type Config struct {
 	HTTP HTTPConfig `mapstructure:"http" validate:"required"`
 
-	PidPath              string          `mapstructure:"pid_path" validate:"required"`
-	EnableFormatAutoAVIF bool            `mapstructure:"enable_format_auto_avif"`
-	AcceptTypeFiles      []string        `mapstructure:"accept_type_files" validate:"required"`
-	ResizeTypeFiles      []string        `mapstructure:"resize_type_files" validate:"required"`
-	ResizeCGI            ResizeCGIConfig `mapstructure:"resize_cgi"`
-	Headers              types.Headers   `mapstructure:"headers"`
-	RequestTimeout       time.Duration   `mapstructure:"request_timeout"`
-	Projects             []Project       `mapstructure:"projects" validate:"unique-project-cfg,required,unique=ID,min=1,dive"`
-	BufferPoolSize       int             `mapstructure:"buffer_pool_size" validate:"min=1"`
+	PidPath              string            `mapstructure:"pid_path" validate:"required"`
+	EnableFormatAutoAVIF bool              `mapstructure:"enable_format_auto_avif"`
+	AcceptTypeFiles      []string          `mapstructure:"accept_type_files" validate:"required"`
+	ResizeTypeFiles      []string          `mapstructure:"resize_type_files" validate:"required"`
+	ResizeCGI            ResizeCGIConfig   `mapstructure:"resize_cgi"`
+	Headers              types.Headers     `mapstructure:"headers"`
+	RequestTimeout       time.Duration     `mapstructure:"request_timeout"`
+	Projects             []Project         `mapstructure:"projects" validate:"unique-project-cfg,required,unique=ID,min=1,dive"`
+	BufferPoolSize       int               `mapstructure:"buffer_pool_size" validate:"min=1"`
+	SourceLimit          SourceLimitConfig `mapstructure:"source_limit" validate:"required"`
 }
 
 type Project struct {
@@ -126,5 +141,10 @@ func DefaultConfig() *Config {
 		Headers:        types.Headers{},
 		RequestTimeout: DefaultRequestTimeout,
 		BufferPoolSize: DefaultBufferPoolSize,
+		SourceLimit: SourceLimitConfig{
+			Mode:      SourceLimitModeOff,
+			MaxWidth:  DefaultMaxSourceWidth,
+			MaxHeight: DefaultMaxSourceHeight,
+		},
 	}
 }

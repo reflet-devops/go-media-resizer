@@ -36,6 +36,11 @@ func TestDefaultConfig(t *testing.T) {
 			Headers:        types.Headers{},
 			RequestTimeout: DefaultRequestTimeout,
 			BufferPoolSize: DefaultBufferPoolSize,
+			SourceLimit: SourceLimitConfig{
+				Mode:      SourceLimitModeOff,
+				MaxWidth:  DefaultMaxSourceWidth,
+				MaxHeight: DefaultMaxSourceHeight,
+			},
 		},
 		got,
 	)
