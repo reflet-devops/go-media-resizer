@@ -41,6 +41,42 @@ docker run -p 8080:8080 -v ./tmp/config.yml:/config.yml go-media-resizer start -
 - **GO_MEDIA_RESIZER_CONFIG_PATH**: Configuration path used to command start. Default: /etc/go-media-resizer/config.yml
 - **LOG_LEVEL**: Chose the log level. Default: INFO
 
+### Runtime Dependencies
+
+The binary is **dynamically linked** against shared libraries provided by `libwebp` (and `libaom` / `libavif` for AVIF support). The host running the binary must provide these libraries with matching SONAMEs.
+
+You can inspect what your binary actually requires with:
+
+```bash
+ldd go-media-resizer
+```
+
+A typical output on a Debian 13 build looks like:
+
+```
+libwebp.so.7      => /lib/x86_64-linux-gnu/libwebp.so.7
+libsharpyuv.so.0  => /lib/x86_64-linux-gnu/libsharpyuv.so.0
+libc.so.6, libm.so.6, ...
+```
+
+#### Pre-built binaries (GitHub Releases)
+
+Official binaries are built on **Debian 13 (trixie)**. Install the runtime libs with:
+
+```bash
+sudo apt-get install libwebp7 libaom3 libavif16
+```
+
+They will run on Debian 13 and any distribution shipping the same SONAMEs (e.g. Ubuntu 24.04+). They will **not** run on Debian 12 (bookworm) without rebuilding — the libwebp version differs.
+
+#### Docker image
+
+The official `refletdevops/go-media-resizer` image bundles all required libraries — no extra setup needed.
+
+#### Targeting another distribution
+
+To run on Debian 12 or any distribution with different libwebp/libaom versions, build the binary directly on that target distribution (see below).
+
 ### Build from Source
 
 #### System Requirements

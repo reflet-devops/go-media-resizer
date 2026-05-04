@@ -10,8 +10,19 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    container: debian:13
     steps:
-      - uses: actions/checkout@v3
+      - name: "Install dependencies"
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git ca-certificates curl wget \
+            libaom-dev libwebp-dev pkg-config gcc libc6-dev
+
+      - name: Mark workspace as safe for git
+        run: git config --global --add safe.directory '*'
+
+      - uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -19,11 +30,6 @@ jobs:
           go-version-file: go.mod
           cache: true
           cache-dependency-path: go.sum
-
-      - name: "Install dependencies"
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libaom-dev libwebp-dev
 
       - name: Get dependencies
         run: go mod download
@@ -35,7 +41,15 @@ jobs:
         run: go test -v ./...
 
       - name: Build
-        run: go build -v .
+        run: go build -tags=nodynamic -v -o go-media-resizer .
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-media-resizer
+          path: go-media-resizer
+          retention-days: 1
+          if-no-files-found: error
 
 
 

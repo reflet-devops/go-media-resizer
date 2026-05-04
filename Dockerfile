@@ -1,4 +1,4 @@
-FROM golang:1.24-bookworm AS builder
+FROM golang:1.24-trixie AS builder
 ARG VERSION="main"
 ARG COMMIT_SHORT="snapshot"
 
@@ -15,7 +15,7 @@ ENV LDFLAGS=" -s -w -X github.com/reflet-devops/go-media-resizer/version.Version
 COPY . .
 RUN CGO_ENABLED=1 go build -tags=nodynamic -ldflags "${LDFLAGS}" -o go-media-resizer
 
-FROM debian:12
+FROM debian:13
 
 RUN apt-get update \
   && apt-get install --force-yes -y \

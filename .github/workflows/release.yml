@@ -12,15 +12,24 @@ permissions:
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
+    container:
+      image: debian:13
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
     steps:
+      - name: "Install dependencies"
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git ca-certificates curl wget gpg \
+            libaom-dev libwebp-dev pkg-config gcc libc6-dev \
+            docker.io docker-buildx
+      - name: Mark workspace as safe for git
+        run: git config --global --add safe.directory '*'
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: "Install dependencies"
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libaom-dev libwebp-dev
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
