@@ -54,6 +54,9 @@ func Transform(file *bytes.Buffer, opts *types.ResizeOption) error {
 		img = Adjust(img, opts)
 	}
 
+	// Discard any bytes left in the input buffer (e.g. trailing MPF sub-image
+	// in Apple HDR Gain Map JPEGs) before reusing it as the output buffer.
+	file.Reset()
 	errFormat := Format(file, img, opts)
 	if errFormat != nil {
 		return fmt.Errorf("failed to format image %s: %w", opts.Source, errFormat)
