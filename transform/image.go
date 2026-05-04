@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	"image/color"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"math"
 	"slices"
 
 	"github.com/disintegration/imaging"
@@ -34,7 +36,6 @@ func ValidateSourceDimensions(data *bytes.Buffer, sourceLimit config.SourceLimit
 	return nil
 }
 
-
 func Transform(file *bytes.Buffer, opts *types.ResizeOption) error {
 	if !opts.NeedTransform() {
 		return nil
@@ -46,9 +47,6 @@ func Transform(file *bytes.Buffer, opts *types.ResizeOption) error {
 	}
 
 	if opts.NeedResize() {
-		if opts.Fit == types.TypeFitCrop && (opts.Width == 0 || opts.Height == 0) {
-			return fmt.Errorf("cannot crop without width and height")
-		}
 		img = Resize(img, opts)
 	}
 
@@ -63,18 +61,56 @@ func Transform(file *bytes.Buffer, opts *types.ResizeOption) error {
 	return nil
 }
 
+func fillMissingDimension(img image.Image, opts *types.ResizeOption) {
+	bounds := img.Bounds()
+	if opts.Width == 0 {
+		opts.Width = bounds.Dx()
+	}
+	if opts.Height == 0 {
+		opts.Height = bounds.Dy()
+	}
+}
+
+func fitProportional(srcW, srcH, maxW, maxH int) (int, int) {
+	scaleW := float64(maxW) / float64(srcW)
+	scaleH := float64(maxH) / float64(srcH)
+	scale := math.Min(scaleW, scaleH)
+	return int(math.Max(1, math.Round(float64(srcW)*scale))), int(math.Max(1, math.Round(float64(srcH)*scale)))
+}
+
 func Resize(img image.Image, opts *types.ResizeOption) image.Image {
 	var imgResize *image.NRGBA
-	if opts.Height == 0 || opts.Width == 0 {
-		opts.Fit = types.TypeResize
-	}
+	bounds := img.Bounds()
+	srcW, srcH := bounds.Dx(), bounds.Dy()
 
 	switch opts.Fit {
 	case types.TypeFitCrop:
+		fillMissingDimension(img, opts)
+		if srcW <= opts.Width && srcH <= opts.Height {
+			imgResize = imaging.CropAnchor(img, opts.Width, opts.Height, imaging.Center)
+		} else {
+			imgResize = imaging.Fill(img, opts.Width, opts.Height, imaging.Center, imaging.Lanczos)
+		}
+	case types.TypeFitCover:
+		fillMissingDimension(img, opts)
 		imgResize = imaging.Fill(img, opts.Width, opts.Height, imaging.Center, imaging.Lanczos)
+	case types.TypeFitContain:
+		if opts.Width == 0 || opts.Height == 0 {
+			imgResize = imaging.Resize(img, opts.Width, opts.Height, imaging.Lanczos)
+		} else {
+			w, h := fitProportional(srcW, srcH, opts.Width, opts.Height)
+			imgResize = imaging.Resize(img, w, h, imaging.Lanczos)
+		}
+	case types.TypeFitPad:
+		fillMissingDimension(img, opts)
+		w, h := fitProportional(srcW, srcH, opts.Width, opts.Height)
+		imgResize = imaging.Resize(img, w, h, imaging.Lanczos)
+		bg := imaging.New(opts.Width, opts.Height, color.Transparent)
+		imgResize = imaging.PasteCenter(bg, imgResize)
 	case types.TypeResize:
 		imgResize = imaging.Resize(img, opts.Width, opts.Height, imaging.Lanczos)
 	default: // types.TypeFitScaleDown
+		fillMissingDimension(img, opts)
 		imgResize = imaging.Fit(img, opts.Width, opts.Height, imaging.Lanczos)
 	}
 

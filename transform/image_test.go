@@ -86,6 +86,110 @@ func TestValidateSourceDimensions(t *testing.T) {
 	}
 }
 
+func Test_fillMissingDimension(t *testing.T) {
+	img := image.NewRGBA(image.Rect(0, 0, 800, 600))
+
+	tests := []struct {
+		name       string
+		opts       *types.ResizeOption
+		wantWidth  int
+		wantHeight int
+	}{
+		{
+			name:       "bothZero",
+			opts:       &types.ResizeOption{},
+			wantWidth:  800,
+			wantHeight: 600,
+		},
+		{
+			name:       "widthZero",
+			opts:       &types.ResizeOption{Width: 0, Height: 200},
+			wantWidth:  800,
+			wantHeight: 200,
+		},
+		{
+			name:       "heightZero",
+			opts:       &types.ResizeOption{Width: 300, Height: 0},
+			wantWidth:  300,
+			wantHeight: 600,
+		},
+		{
+			name:       "bothSet",
+			opts:       &types.ResizeOption{Width: 300, Height: 200},
+			wantWidth:  300,
+			wantHeight: 200,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fillMissingDimension(img, tt.opts)
+			assert.Equal(t, tt.wantWidth, tt.opts.Width)
+			assert.Equal(t, tt.wantHeight, tt.opts.Height)
+		})
+	}
+}
+
+func Test_fitProportional(t *testing.T) {
+	tests := []struct {
+		name                   string
+		srcW, srcH, maxW, maxH int
+		wantW, wantH           int
+	}{
+		{
+			name: "landscapeIntoSquare",
+			srcW: 800, srcH: 400, maxW: 200, maxH: 200,
+			wantW: 200, wantH: 100,
+		},
+		{
+			name: "portraitIntoSquare",
+			srcW: 400, srcH: 800, maxW: 200, maxH: 200,
+			wantW: 100, wantH: 200,
+		},
+		{
+			name: "squareIntoSquare",
+			srcW: 800, srcH: 800, maxW: 200, maxH: 200,
+			wantW: 200, wantH: 200,
+		},
+		{
+			name: "landscapeIntoLandscape",
+			srcW: 1000, srcH: 500, maxW: 400, maxH: 300,
+			wantW: 400, wantH: 200,
+		},
+		{
+			name: "portraitIntoLandscape",
+			srcW: 500, srcH: 1000, maxW: 400, maxH: 300,
+			wantW: 150, wantH: 300,
+		},
+		{
+			name: "exactFit",
+			srcW: 800, srcH: 600, maxW: 800, maxH: 600,
+			wantW: 800, wantH: 600,
+		},
+		{
+			name: "scaleUp",
+			srcW: 100, srcH: 50, maxW: 400, maxH: 400,
+			wantW: 400, wantH: 200,
+		},
+		{
+			name: "verySmallResult",
+			srcW: 1000, srcH: 1, maxW: 2, maxH: 2,
+			wantW: 2, wantH: 1,
+		},
+		{
+			name: "minimumOnePx",
+			srcW: 10000, srcH: 1, maxW: 1, maxH: 1,
+			wantW: 1, wantH: 1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotW, gotH := fitProportional(tt.srcW, tt.srcH, tt.maxW, tt.maxH)
+			assert.Equal(t, tt.wantW, gotW)
+			assert.Equal(t, tt.wantH, gotH)
+		})
+	}
+}
+
 func TestResize(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -98,12 +202,6 @@ func TestResize(t *testing.T) {
 			name:    "successWithJpegResize",
 			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Source: "/fixtures/paysage.jpg", Height: 100, Width: 100},
 			want:    "84497d44a7fd7c2a31c8f339a2954f761d1aeeaafb3e5a816f101168f9bfc787",
-			wantErr: assert.NoError,
-		},
-		{
-			name:    "successWithJpegResizeOnlyWidth",
-			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Source: "/fixtures/paysage.jpg", Width: 100},
-			want:    "9e56a9da761376aedf773eb5ecb61c9522bff9a34f25804973a07afa63e16401",
 			wantErr: assert.NoError,
 		},
 		{
@@ -121,6 +219,106 @@ func TestResize(t *testing.T) {
 		{
 			name:    "successWithJpegFitScaleDownFallbackResize",
 			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitScaleDown, Source: "/fixtures/paysage.jpg", Height: 100},
+			want:    "cb94c098d8a5d0fbee07efa5b0e6f9e99d42ac9f3c456e4b66b14b1903e61ece",
+			wantErr: assert.NoError,
+		},
+
+		// Crop
+		{
+			name:    "successWithJpegFitCropOnlyWidth",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitCrop, Source: "/fixtures/paysage.jpg", Width: 100},
+			want:    "460dbfc9dcee0e546dd64e0eb5d3a93c98b4429b4125ac98bb72319eaa2b508f",
+			wantErr: assert.NoError,
+		},
+		{
+			name:    "successWithJpegFitCropOnlyHeight",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitCrop, Source: "/fixtures/paysage.jpg", Height: 100},
+			want:    "da460737cfef1c09b4f7a76bdc83cc3f2acfe70751da761b622cdee6b27b24bb",
+			wantErr: assert.NoError,
+		},
+		{
+			name:    "successWithJpegFitCropImageSmallerThanTarget",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitCrop, Source: "/fixtures/paysage.jpg", Width: 2000, Height: 2000},
+			want:    "eae9fb1478e624960382cb7f27a617d94ba71ab723e3c617df29d2449aa69135",
+			wantErr: assert.NoError,
+		},
+
+		// Cover
+		{
+			name:    "successWithJpegFitCover",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitCover, Source: "/fixtures/paysage.jpg", Height: 100, Width: 100},
+			want:    "51f4ce14ad1261f4e05d9b49b323c78e85506147c9e3425b6b68e10cf5452b9a",
+			wantErr: assert.NoError,
+		},
+		{
+			name:    "successWithJpegFitCoverOnlyWidth",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitCover, Source: "/fixtures/paysage.jpg", Width: 100},
+			want:    "460dbfc9dcee0e546dd64e0eb5d3a93c98b4429b4125ac98bb72319eaa2b508f",
+			wantErr: assert.NoError,
+		},
+		{
+			name:    "successWithJpegFitCoverOnlyHeight",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitCover, Source: "/fixtures/paysage.jpg", Height: 100},
+			want:    "da460737cfef1c09b4f7a76bdc83cc3f2acfe70751da761b622cdee6b27b24bb",
+			wantErr: assert.NoError,
+		},
+
+		// Contain
+		{
+			name:    "successWithJpegFitContain",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitContain, Source: "/fixtures/paysage.jpg", Height: 100, Width: 100},
+			want:    "9e56a9da761376aedf773eb5ecb61c9522bff9a34f25804973a07afa63e16401",
+			wantErr: assert.NoError,
+		},
+		{
+			name:    "successWithJpegFitContainOnlyWidth",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitContain, Source: "/fixtures/paysage.jpg", Width: 100},
+			want:    "9e56a9da761376aedf773eb5ecb61c9522bff9a34f25804973a07afa63e16401",
+			wantErr: assert.NoError,
+		},
+		{
+			name:    "successWithJpegFitContainOnlyHeight",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitContain, Source: "/fixtures/paysage.jpg", Height: 100},
+			want:    "cb94c098d8a5d0fbee07efa5b0e6f9e99d42ac9f3c456e4b66b14b1903e61ece",
+			wantErr: assert.NoError,
+		},
+
+		// Pad
+		{
+			name:    "successWithJpegFitPad",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitPad, Source: "/fixtures/paysage.jpg", Height: 100, Width: 100},
+			want:    "56b76b439f2fcbf60271a147d4507a01d5903e32077674ad44866d3d32f0b3fc",
+			wantErr: assert.NoError,
+		},
+		{
+			name:    "successWithJpegFitPadOnlyWidth",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitPad, Source: "/fixtures/paysage.jpg", Width: 100},
+			want:    "24682cefabc7afdc324a33b595f20bb69ebcdb125d6b89cf0f70b05e2358c779",
+			wantErr: assert.NoError,
+		},
+		{
+			name:    "successWithJpegFitPadOnlyHeight",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeFitPad, Source: "/fixtures/paysage.jpg", Height: 100},
+			want:    "7785b52dc951512a2cf5eeb223e9891ae1b668f643748dcb72270020acf4d9f1",
+			wantErr: assert.NoError,
+		},
+
+		// Resize
+		{
+			name:    "successWithJpegFitResize",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeResize, Source: "/fixtures/paysage.jpg", Height: 100, Width: 100},
+			want:    "2bd761ee4b02f7ccbfc005e57b73b6a63f5731f723b442f9b5a8bb0abdef41b7",
+			wantErr: assert.NoError,
+		},
+		{
+			name:    "successWithJpegFitResizeOnlyWidth",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeResize, Source: "/fixtures/paysage.jpg", Width: 100},
+			want:    "9e56a9da761376aedf773eb5ecb61c9522bff9a34f25804973a07afa63e16401",
+			wantErr: assert.NoError,
+		},
+		{
+			name:    "successWithJpegFitResizeOnlyHeight",
+			opts:    &types.ResizeOption{OriginFormat: types.TypeJPEG, Fit: types.TypeResize, Source: "/fixtures/paysage.jpg", Height: 100},
 			want:    "cb94c098d8a5d0fbee07efa5b0e6f9e99d42ac9f3c456e4b66b14b1903e61ece",
 			wantErr: assert.NoError,
 		},
@@ -315,19 +513,20 @@ func TestTransform(t *testing.T) {
 		{
 			name:    "success",
 			opts:    &types.ResizeOption{Format: types.TypeJPEG, OriginFormat: types.TypeJPEG, Width: 100},
-			wantFn:  func() string { return "9e56a9da761376aedf773eb5ecb61c9522bff9a34f25804973a07afa63e16401" },
+			wantFn:  func() string { return "84497d44a7fd7c2a31c8f339a2954f761d1aeeaafb3e5a816f101168f9bfc787" },
 			wantErr: assert.NoError,
 		},
 		{
 			name:    "successWithBlur",
 			opts:    &types.ResizeOption{Format: types.TypeJPEG, OriginFormat: types.TypeJPEG, Width: 100, Blur: 1},
-			wantFn:  func() string { return "195ede3ecc0f7f92e01cc27aad90e39160c128fe16ede35cc34a346031feffb3" },
+			wantFn:  func() string { return "a48a8d06db5b7a063a4b9aa38b54c945c471fd74c7a0b100eba8ff1366393a63" },
 			wantErr: assert.NoError,
 		},
 		{
-			name:    "failedToFitCropWithoutHeight",
-			opts:    &types.ResizeOption{Format: types.TypeJPEG, OriginFormat: types.TypeJPEG, Fit: types.TypeFitCrop, Width: 100},
-			wantErr: assert.Error,
+			name:   "successWithFitCropOnlyWidth",
+			opts:   &types.ResizeOption{Format: types.TypeJPEG, OriginFormat: types.TypeJPEG, Fit: types.TypeFitCrop, Width: 100},
+			wantFn: func() string { return "460dbfc9dcee0e546dd64e0eb5d3a93c98b4429b4125ac98bb72319eaa2b508f" },
+			wantErr: assert.NoError,
 		},
 		{
 			name:    "failedToDecode",
