@@ -9,6 +9,7 @@ func Decode(input interface{}, output interface{}) error {
 			mapstructure.StringToTimeDurationHookFunc(),
 			mapstructure.StringToIntHookFunc(),
 			mapstructure.StringToFloat64HookFunc(),
+			mapstructure.StringToBoolHookFunc(),
 		),
 		Result: output,
 	}

@@ -120,6 +120,9 @@ curl http://media.example.com/resize/500x300-80/product.jpg
 # CDN-CGI API (if enabled)
 curl http://localhost:8080/cdn-cgi/image/width=500,height=300,quality=85,format=webp/https://example.com/image.jpg
 
+# Inspect the resolved transformation as JSON (no image returned)
+curl "http://media.example.com/resize/500/product.jpg?info=true"
+
 # Metrics endpoint (Prometheus format)
 curl http://localhost:8080/metrics
 ```

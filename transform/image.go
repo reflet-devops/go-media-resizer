@@ -22,18 +22,18 @@ var (
 	DefaultOptionAvif = avif.Options{Speed: avif.DefaultSpeed, Quality: avif.DefaultQuality}
 )
 
-func ValidateSourceDimensions(data *bytes.Buffer, sourceLimit config.SourceLimitConfig) error {
+func ValidateSourceDimensions(data *bytes.Buffer, sourceLimit config.SourceLimitConfig) (image.Config, error) {
 	if sourceLimit.Mode == config.SourceLimitModeOff {
-		return nil
+		return image.Config{}, nil
 	}
 	cfg, _, err := image.DecodeConfig(bytes.NewReader(data.Bytes()))
 	if err != nil {
-		return fmt.Errorf("failed to read image dimensions: %w", err)
+		return cfg, fmt.Errorf("failed to read image dimensions: %w", err)
 	}
 	if cfg.Width > sourceLimit.MaxWidth || cfg.Height > sourceLimit.MaxHeight {
-		return fmt.Errorf("source image dimensions %dx%d exceed maximum allowed %dx%d", cfg.Width, cfg.Height, sourceLimit.MaxWidth, sourceLimit.MaxHeight)
+		return cfg, fmt.Errorf("source image dimensions %dx%d exceed maximum allowed %dx%d", cfg.Width, cfg.Height, sourceLimit.MaxWidth, sourceLimit.MaxHeight)
 	}
-	return nil
+	return cfg, nil
 }
 
 func Transform(file *bytes.Buffer, opts *types.ResizeOption) error {

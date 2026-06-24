@@ -51,6 +51,7 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 		resetBuffer(ctx, content)
 		resetOptResize(ctx, opts)
 	}()
+	extraData := map[string]interface{}{}
 	vary := []string{echo.HeaderAccept}
 	acceptHeaderValue := c.Request().Header.Get(echo.HeaderAccept)
 	DetectFormatFromHeaderAccept(ctx, acceptHeaderValue, opts)
@@ -58,7 +59,8 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 	needTransform := opts.NeedTransform() && slices.Contains(ctx.Config.ResizeTypeFiles, opts.OriginFormat)
 	if needTransform {
 		sourceLimit := ctx.Config.SourceLimit
-		if errValidate := transform.ValidateSourceDimensions(content, sourceLimit); errValidate != nil {
+		imageCfg, errValidate := transform.ValidateSourceDimensions(content, sourceLimit)
+		if errValidate != nil {
 			ctx.Logger.Error(fmt.Sprintf("failed to validate image %s: %v", opts.Source, errValidate), addLogAttr(c)...)
 			c.Response().Header().Add(route.DebugInfoHeader, errValidate.Error())
 			if sourceLimit.Mode == config.SourceLimitModeError {
@@ -66,8 +68,9 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 			}
 			needTransform = false
 		}
+		extraData["originalImage"] = map[string]interface{}{"width": imageCfg.Width, "height": imageCfg.Height}
 	}
-	if needTransform {
+	if needTransform && !opts.Info {
 		errTransform := transform.Transform(content, opts)
 		if errTransform != nil {
 			ctx.Logger.Error(fmt.Sprintf("failed to read data %s: %v", opts.Source, errTransform), addLogAttr(c)...)
@@ -86,6 +89,17 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 
 	for k, v := range opts.Headers {
 		c.Response().Header().Add(k, v)
+	}
+
+	if opts.Info {
+		data := map[string]interface{}{
+			"options": opts,
+		}
+
+		if len(extraData) > 0 {
+			data["extra"] = extraData
+		}
+		return c.JSON(http.StatusOK, data)
 	}
 
 	return c.Stream(http.StatusOK, types.GetMimeType(opts.Format), content)

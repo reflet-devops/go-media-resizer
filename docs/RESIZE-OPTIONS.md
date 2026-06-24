@@ -17,6 +17,7 @@ This document describes all available options for image transformation in the `R
 | `saturation` | Float | Saturation adjustment | 0 (no change) | ✅ |
 | `sharpen` | Float | Sharpening amount | 0 (no sharpening) | ✅ |
 | `gamma` | Float | Gamma correction | 0 (no correction) | ✅ |
+| `info` | Boolean | Return transformation metadata as JSON instead of the image | `false` | ✅ |
 
 ## Detailed Parameters
 
@@ -502,6 +503,54 @@ Specifies the source file path in the storage backend. This parameter is automat
 regex: '^/images/(?<source>.*)'
 # URL: /images/products/photo.jpg → source: "products/photo.jpg"
 ```
+
+---
+
+### Info
+**Type:** Boolean
+**Values:** `true`, `1` (to enable)
+**Default:** `false`
+**CDN-CGI:** `info=true`
+
+When enabled, the service does **not** transform or stream the image. Instead it returns a `application/json` response describing the transformation that *would* be applied, together with optional metadata about the source image. This is useful for debugging URL patterns and inspecting the resolved resize options without downloading the actual image bytes.
+
+```bash
+# Standard endpoint: enable via the `info` query parameter
+curl "http://media.example.com/resize/500/product.jpg?info=true"
+
+# CDN-CGI: enable via the `info` option
+curl "http://localhost:8080/cdn-cgi/image/width=500,info=true/https://example.com/image.jpg"
+```
+
+**Response structure:**
+
+```json
+{
+  "options": {
+    "OriginFormat": "png",
+    "Format": "avif",
+    "Width": 500,
+    "Height": 0,
+    "Quality": 0,
+    "Fit": "scale-down",
+    "Source": "/product.png",
+    "Info": true
+  },
+  "extra": {
+    "originalImage": {
+      "width": 1440,
+      "height": 960
+    }
+  }
+}
+```
+
+**Behavior:**
+- `false` (default): normal behavior, the transformed image is streamed.
+- `true` / `1`: returns JSON metadata with HTTP status `200`.
+- `options`: the fully resolved `ResizeOption` (after default merging and `Accept` header format detection).
+- `extra.originalImage`: the source image dimensions. It is only present when a transformation was required and source dimension validation is active (`source_limit` mode is not `off`); see [Processing Limits](#processing-limits).
+- Response headers (`ETag`, `Vary`, `Cache-Tag`, custom headers, …) are still computed and set on the response, exactly as for a normal request.
 
 ## Usage Examples
 

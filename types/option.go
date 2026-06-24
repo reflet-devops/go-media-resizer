@@ -26,6 +26,8 @@ type ResizeOption struct {
 	Sharpen    float64 `mapstructure:"sharpen"`
 	Gamma      float64 `mapstructure:"gamma"`
 
+	Info bool `mapstructure:"info"`
+
 	Headers Headers
 	Tags    []string
 }
@@ -44,6 +46,8 @@ func (r *ResizeOption) Reset() {
 	r.Contrast = 0
 	r.Sharpen = 0
 	r.Gamma = 0
+
+	r.Info = false
 
 	r.Headers = nil
 	r.Tags = nil
