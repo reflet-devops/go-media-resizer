@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -207,6 +208,65 @@ func TestSendStream(t *testing.T) {
 				assert.Equal(t, http.StatusOK, rec.Code)
 				assert.NotEmpty(t, rec.Header().Get(route.DebugInfoHeader))
 				assert.NotEmpty(t, rec.Body.Bytes())
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name:         "successWithInfoModeAndTransform",
+			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypePNG, Source: "/paysage.png", Width: 500, Info: true},
+			headerAccept: "image/avif,image/webp,image/png",
+			sourceLimit:  &config.SourceLimitConfig{Mode: config.SourceLimitModeError, MaxWidth: 4096, MaxHeight: 4096},
+			contentFn: func() *bytes.Buffer {
+				file, errOpen := os.Open("../../fixtures/paysage.png")
+				assert.NoError(t, errOpen)
+				buff := ctx.BufferPool.Get().(*bytes.Buffer)
+				_, _ = io.Copy(buff, file)
+				return buff
+			},
+			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusOK, rec.Code)
+				assert.Contains(t, rec.Header().Get(echo.HeaderContentType), echo.MIMEApplicationJSON)
+
+				data := map[string]interface{}{}
+				assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &data))
+
+				options, ok := data["options"].(map[string]interface{})
+				assert.True(t, ok)
+				assert.Equal(t, true, options["Info"])
+				assert.Equal(t, float64(500), options["Width"])
+				assert.Equal(t, types.TypeAVIF, options["Format"])
+
+				extra, ok := data["extra"].(map[string]interface{})
+				assert.True(t, ok)
+				originalImage, ok := extra["originalImage"].(map[string]interface{})
+				assert.True(t, ok)
+				assert.Equal(t, float64(1440), originalImage["width"])
+				assert.Equal(t, float64(960), originalImage["height"])
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name:         "successWithInfoModeWithoutTransform",
+			opts:         &types.ResizeOption{Format: types.TypeFormatAuto, OriginFormat: types.TypeText, Source: "/text.txt", Info: true},
+			headerAccept: "text/plain",
+			contentFn: func() *bytes.Buffer {
+				buff := ctx.BufferPool.Get().(*bytes.Buffer)
+				buff.WriteString("hello")
+				return buff
+			},
+			wantFn: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusOK, rec.Code)
+				assert.Contains(t, rec.Header().Get(echo.HeaderContentType), echo.MIMEApplicationJSON)
+
+				data := map[string]interface{}{}
+				assert.NoError(t, json.Unmarshal(rec.Body.Bytes(), &data))
+
+				options, ok := data["options"].(map[string]interface{})
+				assert.True(t, ok)
+				assert.Equal(t, true, options["Info"])
+
+				_, hasExtra := data["extra"]
+				assert.False(t, hasExtra)
 			},
 			wantErr: assert.NoError,
 		},

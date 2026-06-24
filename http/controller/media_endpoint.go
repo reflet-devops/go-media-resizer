@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -54,6 +55,9 @@ func GetMedia(ctx *context.Context, project *config.Project, storage types.Stora
 				types.FormatProjectPathHash(project.ID, urltools.FormatPathWithPrefix(project.PrefixPath, opts.Source))),
 			)
 			opts.AddHeader(route.ProjectIdHeader, project.ID)
+			if slices.Contains([]string{"true", "1"}, c.QueryParam("info")) {
+				opts.Info = true
+			}
 			return SendStream(ctx, c, opts, buffer)
 		}
 		return c.String(http.StatusNotFound, "file not found")

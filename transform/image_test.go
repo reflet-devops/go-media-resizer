@@ -37,49 +37,50 @@ func TestValidateSourceDimensions(t *testing.T) {
 		errSubstr   string
 	}{
 		{
-			name: "modeOff",
-			data: createPNG(5000, 5000),
+			name:        "modeOff",
+			data:        createPNG(5000, 5000),
 			sourceLimit: config.SourceLimitConfig{Mode: config.SourceLimitModeOff, MaxWidth: 4096, MaxHeight: 4096},
-			wantErr: false,
+			wantErr:     false,
 		},
 		{
-			name: "withinLimits",
-			data: createPNG(100, 100),
+			name:        "withinLimits",
+			data:        createPNG(100, 100),
 			sourceLimit: config.SourceLimitConfig{Mode: config.SourceLimitModeError, MaxWidth: 4096, MaxHeight: 4096},
-			wantErr: false,
+			wantErr:     false,
 		},
 		{
-			name: "exactLimits",
-			data: createPNG(4096, 4096),
+			name:        "exactLimits",
+			data:        createPNG(4096, 4096),
 			sourceLimit: config.SourceLimitConfig{Mode: config.SourceLimitModeError, MaxWidth: 4096, MaxHeight: 4096},
-			wantErr: false,
+			wantErr:     false,
 		},
 		{
-			name: "widthExceeded",
-			data: createPNG(4097, 100),
+			name:        "widthExceeded",
+			data:        createPNG(4097, 100),
 			sourceLimit: config.SourceLimitConfig{Mode: config.SourceLimitModeError, MaxWidth: 4096, MaxHeight: 4096},
-			wantErr: true, errSubstr: "exceed maximum",
+			wantErr:     true, errSubstr: "exceed maximum",
 		},
 		{
-			name: "heightExceeded",
-			data: createPNG(100, 4097),
+			name:        "heightExceeded",
+			data:        createPNG(100, 4097),
 			sourceLimit: config.SourceLimitConfig{Mode: config.SourceLimitModePassthrough, MaxWidth: 4096, MaxHeight: 4096},
-			wantErr: true, errSubstr: "exceed maximum",
+			wantErr:     true, errSubstr: "exceed maximum",
 		},
 		{
-			name: "invalidData",
-			data: bytes.NewBufferString("not an image"),
+			name:        "invalidData",
+			data:        bytes.NewBufferString("not an image"),
 			sourceLimit: config.SourceLimitConfig{Mode: config.SourceLimitModeError, MaxWidth: 4096, MaxHeight: 4096},
-			wantErr: true, errSubstr: "failed to read image dimensions",
+			wantErr:     true, errSubstr: "failed to read image dimensions",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateSourceDimensions(tt.data, tt.sourceLimit)
+			cfg, err := ValidateSourceDimensions(tt.data, tt.sourceLimit)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errSubstr)
 			} else {
+				assert.NotNil(t, cfg)
 				assert.NoError(t, err)
 			}
 		})
@@ -523,9 +524,9 @@ func TestTransform(t *testing.T) {
 			wantErr: assert.NoError,
 		},
 		{
-			name:   "successWithFitCropOnlyWidth",
-			opts:   &types.ResizeOption{Format: types.TypeJPEG, OriginFormat: types.TypeJPEG, Fit: types.TypeFitCrop, Width: 100},
-			wantFn: func() string { return "460dbfc9dcee0e546dd64e0eb5d3a93c98b4429b4125ac98bb72319eaa2b508f" },
+			name:    "successWithFitCropOnlyWidth",
+			opts:    &types.ResizeOption{Format: types.TypeJPEG, OriginFormat: types.TypeJPEG, Fit: types.TypeFitCrop, Width: 100},
+			wantFn:  func() string { return "460dbfc9dcee0e546dd64e0eb5d3a93c98b4429b4125ac98bb72319eaa2b508f" },
 			wantErr: assert.NoError,
 		},
 		{
