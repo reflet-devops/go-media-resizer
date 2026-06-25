@@ -79,7 +79,6 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 	}
 	contentHash, _ := hash.GenerateXXHashFromBytes(content.Bytes())
 
-	c.Response().Header().Add(echo.HeaderContentLength, strconv.Itoa(content.Len()))
 	c.Response().Header().Add("Date", time.Now().In(TimeLocationGMT).Format(time.RFC1123))
 	c.Response().Header().Add("ETag", contentHash)
 	c.Response().Header().Add(echo.HeaderVary, strings.Join(vary, ", "))
@@ -100,6 +99,10 @@ func SendStream(ctx *context.Context, c echo.Context, opts *types.ResizeOption, 
 			data["extra"] = extraData
 		}
 		return c.JSON(http.StatusOK, data)
+	}
+	// Add header content length only if we are not in info mode
+	if !opts.Info {
+		c.Response().Header().Add(echo.HeaderContentLength, strconv.Itoa(content.Len()))
 	}
 
 	return c.Stream(http.StatusOK, types.GetMimeType(opts.Format), content)
